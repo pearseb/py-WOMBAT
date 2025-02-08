@@ -9,7 +9,7 @@ Created on Thu Jan 30 14:45:46 2025
 import numpy as np
 import xarray as xr
 
-def get_mld_timeseries(yyyy, latitude, longitude, dt):
+def get_w_timeseries(yyyy, latitude, longitude, dt, zbot):
     """
     Computes and returns the interpolated mixed layer depth (MLD) timeseries.
     
@@ -18,6 +18,7 @@ def get_mld_timeseries(yyyy, latitude, longitude, dt):
     latitude (float): Latitude for spatial selection.
     longitude (float): Longitude for spatial selection.
     dt (float): Time step in minutes.
+    bot (float): Time step in minutes.
     
     Returns:
     np.ndarray: Interpolated MLD timeseries.
@@ -32,20 +33,24 @@ def get_mld_timeseries(yyyy, latitude, longitude, dt):
     times = np.arange(np.datetime64(start, 'ns'), np.datetime64(end, 'ns'), np.timedelta64(int(min_per_ts),'m')).astype('datetime64[ns]')
     
     # Load dataset
-    data = xr.open_mfdataset('inputs/ocean_mld_%i_*.nc'%(yyyy))
-    mld = data['mld']
+    data = xr.open_mfdataset('inputs/ocean_w_mth_%i_*.nc'%(yyyy), chunks={"Time":-1})
+    w = data['w']
+    w = w.chunk({"Time":-1})
     data.close()
     
     # Select nearest grid point
-    mld = mld.sel(yt_ocean=latitude, xt_ocean=longitude, method='nearest')
+    w = w.sel(yt_ocean=latitude, xt_ocean=longitude, method='nearest').compute()
+    
+    # take the average in depth with minimum upwelling rate of 1 m/year
+    w = w.sel(sw_ocean=slice(0,zbot)).mean(dim='sw_ocean')
     
     # Wrap timeseries data for interpolation
-    mld1 = mld.isel(Time=-1).assign_coords(Time=np.datetime64("%i-12-31T22:30:00"%(yyyb), 'ns'))
-    mld2 = mld.isel(Time=0).assign_coords(Time=np.datetime64("%i-01-01T01:30:00"%(yyya), 'ns'))
-    mld_ = xr.concat([mld1, mld, mld2], dim='Time')
+    w1 = w.isel(Time=-1).assign_coords(Time=np.datetime64("%i-12-31T22:30:00"%(yyyb), 'ns'))
+    w2 = w.isel(Time=0).assign_coords(Time=np.datetime64("%i-01-01T01:30:00"%(yyya), 'ns'))
+    w_ = xr.concat([w1, w, w2], dim='Time')
     
     # Interpolate values based on number of timesteps
-    mld__ = mld_.interp(Time=times)
-    mld_timeseries = mld__.values
+    w__ = w_.interp(Time=times)
+    w_timeseries = w__.values
     
-    return mld_timeseries
+    return w_timeseries
