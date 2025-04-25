@@ -48,6 +48,7 @@ class p_BGC:
         self.phy_lmort = phy_lmort * self.d2s  # Linear mortality rate for phytoplankton (/s)
         self.phy_qmort = phy_qmort * self.d2s  # Quadratic mortality rate for phytoplankton (/s)
         self.phy_CN = 122.0 / 16.0  # Carbon-to-nitrogen ratio for phytoplankton
+        self.phy_CO = 122.0 / 172.0  # Carbon-to-Doxygen ratio for phytoplankton
         self.phy_minchlc = phy_minchlc  # Minimum chlorophyll-to-carbon ratio
         self.phy_optchlc = phy_optchlc  # Optimal chlorophyll-to-carbon ratio
         self.phy_optFeC = phy_optFeC  # Optimal iron-to-carbon ratio
