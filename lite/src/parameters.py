@@ -30,7 +30,7 @@ class p_Advec:
 class p_BGC:
     """Defines parameters related to the biogeochemical model."""
 
-    def __init__(self, zoo_qmort=0.35, zoo_assim=0.6, zoo_excr=0.8, zoo_grz=3.0, grazform=1, detrem=0.40):
+    def __init__(self, zoo_qmort=0.35, zoo_assim=0.6, zoo_excre=0.8, zoo_grz=3.0, grazform=1, detrem=0.40):
         self.d2s = 1.0 / 86400.0  # Conversion factor: days to seconds
         self.alpha = 2.25  # PI curve slope for photosynthesis
         self.PAR_bio = 0.43  # Fraction of PAR available biologically
@@ -56,7 +56,7 @@ class p_BGC:
         self.zoo_qmort = zoo_qmort * self.d2s  # Quadratic mortality rate for zooplankton (/s)
         self.zoo_respi = 0.003 * self.d2s  # Respiration rate for zooplankton (/s)
         self.zoo_assim = zoo_assim  # Zooplankton assimilation efficiency
-        self.zoo_excre = zoo_excr  # Zooplankton excretion efficiency
+        self.zoo_excre = zoo_excre  # Zooplankton excretion efficiency
         self.zoo_kzoo = 0.25  # Half-saturation constant for zooplankton linear mortality
         self.grazform = grazform  # Grazing formulation type (1, 2, or 3)
         self.detrem = detrem * self.d2s  # Remineralization rate for detritus (/s)
