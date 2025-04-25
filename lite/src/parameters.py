@@ -30,11 +30,11 @@ class p_Diff:
 class p_BGC:
     """Defines parameters related to the biogeochemical model."""
 
-    def __init__(self, alpha=2.25, auto_aT=1.0, auto_bT=1.050, hete_aT=1.0, hete_bT=1.066, phy_kn=2.0, phy_kf=1.2e-3, phy_biothresh=0.5, 
+    def __init__(self, alpha=2.25, auto_aT=1.15, auto_bT=1.060, hete_aT=1.0, hete_bT=1.066, phy_kn=2.0, phy_kf=1.2e-3, phy_biothresh=0.5, 
                  phy_lmort=0.005, phy_qmort=0.05, phy_minchlc=0.004, phy_optchlc=0.036, phy_optFeC=10e-6, phy_maxFeC=50e-6, 
-                 zoo_respi=0.003, zoo_qmort=0.35, zoo_assim=0.6, zoo_excre=0.8, 
-                 zoo_grz=3.0, zoo_epsmin=0.025, zoo_epsmax=0.25, zoo_epsmid=1.5, zoo_epsrat=3.0, zoo_inerti=30.0, 
-                 zoo_prefdet=0.50, grazform=1, detrem=0.40, w0=25.0):
+                 zoo_respi=0.003, zoo_qmort=0.80, zoo_assim=0.6, zoo_excre=0.75, 
+                 zoo_grz=3.0, zoo_epsmin=0.025, zoo_epsmax=0.25, zoo_epsrat=0.2, zoo_inerti=30.0, 
+                 zoo_prefdet=0.50, detrem=0.50, w0=25.0):
         self.d2s = 1.0 / 86400.0  # Conversion factor: days to seconds
         self.alpha = alpha  # PI curve slope for photosynthesis
         self.PAR_bio = 0.43  # Fraction of PAR available biologically
@@ -55,7 +55,6 @@ class p_BGC:
         self.zoo_grz = zoo_grz * self.d2s  # Maximum grazing rate for zooplankton (/s)
         self.zoo_epsmin = zoo_epsmin * self.d2s  # Minimum grazing efficiency for zooplankton
         self.zoo_epsmax = zoo_epsmax * self.d2s  # Maximum grazing efficiency for zooplankton
-        self.zoo_epsmid = zoo_epsmid  # Phytoplankton concentration at 50% transition between min and max epsilon
         self.zoo_epsrat = zoo_epsrat  # Rate at which epsilon transitions from min to max values
         self.zoo_inerti = zoo_inerti  # Number of previous days for moving average of the prey field
         self.zoo_prefphy = 1.00  # Zooplankton preference for phytoplankton
@@ -65,7 +64,6 @@ class p_BGC:
         self.zoo_assim = zoo_assim  # Zooplankton assimilation efficiency
         self.zoo_excre = zoo_excre  # Zooplankton excretion efficiency
         self.zoo_kzoo = 0.25  # Half-saturation constant for zooplankton linear mortality
-        self.grazform = grazform  # Grazing formulation type (1, 2, or 3)
         self.detrem = detrem * self.d2s  # Remineralization rate for detritus (/s)
         self.w0 = w0 * self.d2s  # Sinking velocity of detritus (m/day)
         self.biomin = 1e-5  # Minimum biomass concentration (µM)
