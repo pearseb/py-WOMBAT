@@ -34,7 +34,10 @@ class p_BGC:
                  phy_lmort=0.005, phy_qmort=0.05, phy_minchlc=0.004, phy_optchlc=0.036, phy_optFeC=10e-6, phy_maxFeC=50e-6, 
                  zoo_respi=0.003, zoo_qmort=0.80, zoo_assim=0.6, zoo_excre=0.75, 
                  zoo_grz=3.0, zoo_epsmin=0.025, zoo_epsmax=0.25, zoo_epsrat=0.2, zoo_inerti=30.0, 
-                 zoo_prefdet=0.50, detrem=0.50, w0=25.0):
+                 zoo_prefdet=0.50, detrem=0.50, w0=25.0,
+                 aoa_aT=0.5, nob_aT=1.0, chem_bT=1.020, 
+                 aoa_kn=0.1, nob_kn=0.1, aoa_pO2=1171.5, nob_pO2=282.7, aoa_ynh4=0.0245, nob_yno2=0.0126, aoa_yo2=0.0183, nob_yo2=0.022, 
+                 aoa_Fe2C=10e-6, nob_Fe2C=10e-6, aoa_lmort=0.005, nob_lmort=0.005, aoa_qmort=0.05, nob_qmort=0.05):
         self.d2s = 1.0 / 86400.0  # Conversion factor: days to seconds
         self.alpha = alpha  # PI curve slope for photosynthesis
         self.PAR_bio = 0.43  # Fraction of PAR available biologically
@@ -60,6 +63,8 @@ class p_BGC:
         self.zoo_inerti = zoo_inerti  # Number of previous days for moving average of the prey field
         self.zoo_prefphy = 1.00  # Zooplankton preference for phytoplankton
         self.zoo_prefdet = zoo_prefdet  # Zooplankton preference for detritus
+        self.zoo_prefaoa = 1.0  # Zooplankton preference for AOA
+        self.zoo_prefnob = 1.0  # Zooplankton preference for NOB
         self.zoo_qmort = zoo_qmort * self.d2s  # Quadratic mortality rate for zooplankton (/s)
         self.zoo_respi = zoo_respi * self.d2s  # Respiration rate for zooplankton (/s)
         self.zoo_assim = zoo_assim  # Zooplankton assimilation efficiency
@@ -69,4 +74,23 @@ class p_BGC:
         self.w0 = w0 * self.d2s  # Sinking velocity of detritus (m/day)
         self.biomin = 1e-5  # Minimum biomass concentration (µM)
         self.dfemin = 0.0001  # Minimum dFe concentration (µM)
+        self.aoa_aT = aoa_aT  # Maximum growth rate scaling for Ammonium Oxidizing Archaea
+        self.nob_aT = nob_aT  # Maximum growth rate scaling for Nitrite Oxidizing Bacteria
+        self.chem_bT = auto_bT  # Temperature dependence for chemautotrophs
+        self.aoa_kn = aoa_kn  # Half-saturation constant for Ammonium for Ammonium Oxidizing Archaea
+        self.nob_kn = nob_kn  # Half-saturation constant for Nitrite for Nitrite Oxidizing Bacteria
+        self.aoa_pO2 = aoa_pO2  # diffusive oxygen coefficient for Ammonium for Ammonium Oxidizing Archaea
+        self.nob_pO2 = nob_pO2  # diffusive oxygen coefficient for Nitrite for Nitrite Oxidizing Bacteria
+        self.aoa_ynh4 = aoa_ynh4  # Growth yield on NH4 for Ammonium Oxidizing Archaea
+        self.nob_yno2 = nob_yno2  # Growth yeild on NO2 for Nitrite Oxidizing Bacteria
+        self.aoa_yo2 = aoa_yo2  # Growth yield on O2 for Ammonium Oxidizing Archaea
+        self.nob_yo2 = nob_yo2  # Growth yeild on O2 for Nitrite Oxidizing Bacteria
+        self.aoa_Fe2C = aoa_Fe2C  # Fe:C ratio for Ammonium Oxidizing Archaea
+        self.nob_Fe2C = nob_Fe2C  # Fe:C ratio for Nitrite Oxidizing Bacteria
+        self.aoa_lmort = aoa_lmort * self.d2s  # Linear mortality rate for AOA (/s)
+        self.nob_lmort = nob_lmort * self.d2s  # Linear mortality rate for NOB (/s)
+        self.aoa_qmort = aoa_qmort * self.d2s  # Quadratic mortality rate for AOA (/s)
+        self.nob_qmort = nob_qmort * self.d2s  # Quadratic mortality rate for NOB (/s)
+        
+        
         
