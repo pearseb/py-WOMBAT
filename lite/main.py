@@ -1,5 +1,6 @@
 
 import os 
+import sys
 from pathlib import Path
 import logging
 
@@ -29,7 +30,7 @@ from src.light import compute_light_profile
 from src.bgc import compute_light_limit, compute_nutrient_limit, compute_primary_production, \
                     compute_chlorophyll_growth_rate, compute_iron_uptake, compute_grazing, \
                     compute_losses, compute_iron_chemistry, compute_co2_flux, compute_nitrification, \
-                    compute_sourcessinks
+                    compute_totalN, compute_sourcessinks
 from src.plot import plot1D
 
 def main(expnum, year, days, lon, lat, atm_co2):
@@ -341,6 +342,8 @@ def main(expnum, year, days, lon, lat, atm_co2):
             chlorophyll_growth_rate['chl_mu'], light_limit['chlc_ratio'], 
             co2_flux['co2_flux'] / Grid.dz,
             BGC)
+        
+        totalN1 = compute_totalN(aoa_loc, nob_loc, phy_loc, zoo_loc, det_loc, nh4_loc, no2_loc, no3_loc, BGC)
 
         #logging.info("Updating arrays")
         # Step 5: Update tracer concentrations based on sources and sinks
@@ -360,7 +363,26 @@ def main(expnum, year, days, lon, lat, atm_co2):
         dic_loc[:,1] += sourcessinks["ddt_dic"] * dt
         alk_loc[:,1] += sourcessinks["ddt_alk"] * dt
         o2_loc[:,1] += sourcessinks["ddt_o2"] * dt
+
+        totalN2 = compute_totalN(aoa_loc, nob_loc, phy_loc, zoo_loc, det_loc, nh4_loc, no2_loc, no3_loc, BGC)
         
+        # Check for conservation of mass by ecosystem component
+        if not (np.allclose(totalN1, totalN2, atol=1e-12)):
+            logging.info("Not conserving nitrogen")
+            logging.info("totalN1 = %s"%(np.array2string(totalN1, precision=16, separator=", ", suppress_small=True)))
+            logging.info("totalN2 = %s"%(np.array2string(totalN2, precision=16, separator=", ", suppress_small=True)))
+            logging.info(" ")
+            logging.info("ddt_no3 * dt = %s, "%(np.array2string(sourcessinks["ddt_no3"] * dt, precision=16, separator=", ", suppress_small=True)))
+            logging.info("ddt_no2 * dt = %s, "%(np.array2string(sourcessinks["ddt_no2"] * dt, precision=16, separator=", ", suppress_small=True)))
+            logging.info("ddt_nh4 * dt = %s, "%(np.array2string(sourcessinks["ddt_nh4"] * dt, precision=16, separator=", ", suppress_small=True)))
+            logging.info("ddt_phy * dt = %s, "%(np.array2string(sourcessinks["ddt_phy"] * dt, precision=16, separator=", ", suppress_small=True)))
+            logging.info("ddt_zoo * dt = %s, "%(np.array2string(sourcessinks["ddt_zoo"] * dt, precision=16, separator=", ", suppress_small=True)))
+            logging.info("ddt_det * dt = %s, "%(np.array2string(sourcessinks["ddt_det"] * dt, precision=16, separator=", ", suppress_small=True)))
+            logging.info("ddt_aoa * dt = %s, "%(np.array2string(sourcessinks["ddt_aoa"] * dt, precision=16, separator=", ", suppress_small=True)))
+            logging.info("ddt_nob * dt = %s, "%(np.array2string(sourcessinks["ddt_nob"] * dt, precision=16, separator=", ", suppress_small=True)))
+            print("Not conserving nitrogen... exiting simulation")
+            sys.exit()
+
         if (step % plot_freq) == 0:
             ## Step 6: Plot the output and save as a figure
             #fig = plot1D(no3_loc[:,1], dfe_loc[:,1], \

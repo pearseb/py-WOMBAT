@@ -36,8 +36,9 @@ class p_BGC:
                  zoo_grz=3.0, zoo_epsmin=0.025, zoo_epsmax=0.25, zoo_epsrat=0.2, zoo_inerti=30.0, 
                  zoo_prefdet=0.50, detrem=0.50, w0=25.0,
                  aoa_aT=0.5, nob_aT=1.0, chem_bT=1.020, 
-                 aoa_kn=0.1, nob_kn=0.1, aoa_pO2=1171.5, nob_pO2=282.7, aoa_ynh4=0.0245, nob_yno2=0.0126, aoa_yo2=0.0183, nob_yo2=0.022, 
-                 aoa_Fe2C=10e-6, nob_Fe2C=10e-6, aoa_lmort=0.005, nob_lmort=0.005, aoa_qmort=0.05, nob_qmort=0.05):
+                 aoa_kn=0.1, nob_kn=0.1, aoa_pO2=275.0, nob_pO2=67.0, 
+                 aoa_ynh4=1.0/11.0, nob_yno2=1.0/27.8, aoa_yo2=1.0/15.5, nob_yo2=1.0/12.9, 
+                 aoa_Fe2C=20e-6, nob_Fe2C=20e-6, aoa_lmort=0.005, nob_lmort=0.005, aoa_qmort=0.05, nob_qmort=0.05):
         self.d2s = 1.0 / 86400.0  # Conversion factor: days to seconds
         self.alpha = alpha  # PI curve slope for photosynthesis
         self.PAR_bio = 0.43  # Fraction of PAR available biologically

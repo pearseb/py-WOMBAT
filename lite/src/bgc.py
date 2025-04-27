@@ -374,7 +374,7 @@ def compute_losses(tc, aoa_loc, nob_loc, phy_loc, zoo_loc, det_loc, BGC):
         phy_loc (np.ndarray): Phytoplankton concentration (µmolC/L).
         zoo_loc (np.ndarray): Zooplankton concentration (µmolC/L).
         det_loc (np.ndarray): Detritus concentration (µmolC/L).
-    
+
     Returns:
         dict: A dictionary containing:
             - `phy_lmort` (np.ndarray): Linear mortality rate for phytoplankton (µmolC/L/s).
@@ -739,17 +739,19 @@ def compute_sourcessinks(phy_mu, phy_lmort, phy_qmort, phy_dfeupt, phy_limnh4, p
         - phy_mu * phy_loc * (phy_limno3 / (phy_limnh4 + phy_limno3)) / BGC.phy_CN
     )
 
+    ddt_no2 = (
+        aoa_mu * aoa_loc * (1.0/BGC.aoa_ynh4 - 1.0/BGC.phy_CN) 
+        - nob_mu * nob_loc * 1.0/BGC.nob_yno2
+    )
+
     ddt_nh4 = (
         (phy_lmort + aoa_lmort + nob_lmort + zoo_zoores + det_remin 
          + (1.0 - BGC.zoo_assim) * BGC.zoo_excre * (zoo_grzphy + zoo_grzdet + zoo_grzaoa + zoo_grznob)) / BGC.phy_CN
         - phy_mu * phy_loc * (phy_limnh4 / (phy_limnh4 + phy_limno3) ) / BGC.phy_CN
         - aoa_mu * aoa_loc * 1.0/BGC.aoa_ynh4
+        - nob_mu * nob_loc * 1.0/BGC.phy_CN
     )
         
-    ddt_no2 = (
-        aoa_mu * aoa_loc * 1.0/BGC.aoa_ynh4 
-        - nob_mu * nob_loc * 1.0/BGC.nob_yno2
-    )
 
     ddt_o2 = (
         phy_mu * phy_loc / BGC.phy_CO 
@@ -794,7 +796,7 @@ def compute_sourcessinks(phy_mu, phy_lmort, phy_qmort, phy_dfeupt, phy_limnh4, p
         + dfe_scav + dfe_coag
     )
 
-    ddt_pchl = chl_mu - chlc_ratio * (phy_lmort + phy_qmort + zoo_qmort) * 12
+    ddt_pchl = chl_mu - chlc_ratio * (phy_lmort + phy_qmort + zoo_grzphy) * 12
     
     ddt_dic = ddt_nh4 * BGC.phy_CN
     ddt_dic[0] = ddt_nh4[0] + co2_flux
@@ -818,3 +820,30 @@ def compute_sourcessinks(phy_mu, phy_lmort, phy_qmort, phy_dfeupt, phy_limnh4, p
         "ddt_alk": ddt_alk,
         "ddt_o2": ddt_o2,
     }
+
+
+#@njit
+def compute_totalN(aoa_loc, nob_loc, phy_loc, zoo_loc, det_loc, nh4_loc, no2_loc, no3_loc, BGC):
+    """
+    Returns total N.
+
+    Parameters:
+        - aoa_loc (np.ndarray): AOA carbon biomass.
+        - nob_loc (np.ndarray): NOB carbon biomass.
+        - phy_loc (np.ndarray): Phytoplankton carbon biomass.
+        - zoo_loc (np.ndarray): Zooplankton carbon biomass.
+        - det_loc (np.ndarray): Detrital carbon biomass.
+        - nh4_loc (np.ndarray): Ammonium concentration.
+        - no2_loc (np.ndarray): Nitrite concentration.
+        - no3_loc (np.ndarray): Nitrate concentration.        
+        
+    Returns:
+        dict: A dictionary containing:
+            - `totalN` (np.ndarray): Total Nitrogen content (µmolN/L).
+            
+    """
+
+    totalN = (aoa_loc[:,1] + nob_loc[:,1] + phy_loc[:,1] + zoo_loc[:,1] + det_loc[:,1]) / BGC.phy_CN \
+        + nh4_loc[:,1] + no2_loc[:,1] + no3_loc[:,1]
+    return totalN
+
