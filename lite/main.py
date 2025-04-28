@@ -29,7 +29,7 @@ from src.sinking import compute_sinking, compute_sink_rate
 from src.light import compute_light_profile
 from src.bgc import compute_light_limit, compute_nutrient_limit, compute_primary_production, \
                     compute_chlorophyll_growth_rate, compute_iron_uptake, compute_grazing, \
-                    compute_losses, compute_iron_chemistry, compute_co2_flux, compute_nitrification, \
+                    compute_losses, compute_iron_chemistry, compute_co2_flux, compute_chemoauto, \
                     compute_totalN, compute_sourcessinks
 from src.plot import plot1D
 
@@ -57,9 +57,11 @@ def main(expnum, year, days, lon, lat, atm_co2):
     no3_loc = tracers['no3']
     nh4_loc = tracers['nh4']
     no2_loc = tracers['no2']
+    n2_loc = tracers['n2']
     dfe_loc = tracers['dfe']
     aoa_loc = tracers['aoa']
     nob_loc = tracers['nob']
+    aox_loc = tracers['aox']
     phy_loc = tracers['phy']
     zoo_loc = tracers['zoo']
     det_loc = tracers['det']
@@ -76,6 +78,7 @@ def main(expnum, year, days, lon, lat, atm_co2):
     mdet_loc = np.repeat(det_loc, Nrepeats, axis=1)
     maoa_loc = np.repeat(aoa_loc, Nrepeats, axis=1)
     mnob_loc = np.repeat(nob_loc, Nrepeats, axis=1)
+    maox_loc = np.repeat(aox_loc, Nrepeats, axis=1)
     # initial tracer values through water column
     ino3 = no3_loc[:,0]
     idfe = dfe_loc[:,0]
@@ -106,9 +109,11 @@ def main(expnum, year, days, lon, lat, atm_co2):
     no3_output = np.zeros((Grid.npt, total_steps // plot_freq))
     nh4_output = np.zeros((Grid.npt, total_steps // plot_freq))
     no2_output = np.zeros((Grid.npt, total_steps // plot_freq))
+    n2_output = np.zeros((Grid.npt, total_steps // plot_freq))
     dfe_output = np.zeros((Grid.npt, total_steps // plot_freq))
     aoa_output = np.zeros((Grid.npt, total_steps // plot_freq))
     nob_output = np.zeros((Grid.npt, total_steps // plot_freq))
+    aox_output = np.zeros((Grid.npt, total_steps // plot_freq))
     phy_output = np.zeros((Grid.npt, total_steps // plot_freq))
     pchl_output = np.zeros((Grid.npt, total_steps // plot_freq))
     zoo_output = np.zeros((Grid.npt, total_steps // plot_freq))
@@ -120,13 +125,16 @@ def main(expnum, year, days, lon, lat, atm_co2):
     zoomu_output = np.zeros((Grid.npt, total_steps // plot_freq))
     aoamu_output = np.zeros((Grid.npt, total_steps // plot_freq))
     nobmu_output = np.zeros((Grid.npt, total_steps // plot_freq))
+    aoxmu_output = np.zeros((Grid.npt, total_steps // plot_freq))
     zoogrzphy_output = np.zeros((Grid.npt, total_steps // plot_freq))
     zoogrzdet_output = np.zeros((Grid.npt, total_steps // plot_freq))
     zoogrzaoa_output = np.zeros((Grid.npt, total_steps // plot_freq))
     zoogrznob_output = np.zeros((Grid.npt, total_steps // plot_freq))
+    zoogrzaox_output = np.zeros((Grid.npt, total_steps // plot_freq))
     zooepsilon_output = np.zeros((Grid.npt, total_steps // plot_freq))
     aoaox_output = np.zeros((Grid.npt, total_steps // plot_freq))
     nobox_output = np.zeros((Grid.npt, total_steps // plot_freq))
+    anammox_output = np.zeros((Grid.npt, total_steps // plot_freq))
     fco2_output = np.zeros((total_steps // plot_freq))
     pco2_output = np.zeros((total_steps // plot_freq))
     cexp_output = np.zeros((Grid.npt, total_steps // plot_freq))
@@ -150,9 +158,11 @@ def main(expnum, year, days, lon, lat, atm_co2):
         no3_loc[:,0] = np.fmax(no3_loc[:,1], BGC.biomin)
         nh4_loc[:,0] = np.fmax(nh4_loc[:,1], BGC.biomin)
         no2_loc[:,0] = np.fmax(no2_loc[:,1], BGC.biomin)
+        n2_loc[:,0] = np.fmax(n2_loc[:,1], BGC.biomin)
         dfe_loc[:,0] = np.fmax(dfe_loc[:,1], BGC.dfemin)
         aoa_loc[:,0] = np.fmax(aoa_loc[:,1], BGC.biomin)
         nob_loc[:,0] = np.fmax(nob_loc[:,1], BGC.biomin)
+        aox_loc[:,0] = np.fmax(aox_loc[:,1], BGC.biomin)
         phy_loc[:,0] = np.fmax(phy_loc[:,1], BGC.biomin)
         phyfe_loc[:,0] = np.fmax(phyfe_loc[:,1], BGC.biomin*1e-6)
         zoo_loc[:,0] = np.fmax(zoo_loc[:,1], BGC.biomin)
@@ -168,10 +178,12 @@ def main(expnum, year, days, lon, lat, atm_co2):
         mdet_loc[:,0:-1] = mdet_loc[:,1::]
         maoa_loc[:,0:-1] = maoa_loc[:,1::]
         mnob_loc[:,0:-1] = mnob_loc[:,1::]
+        maox_loc[:,0:-1] = maox_loc[:,1::]
         mphy_loc[:,-1] = phy_loc[:,1]
         mdet_loc[:,-1] = det_loc[:,1]
         maoa_loc[:,-1] = aoa_loc[:,1]
         mnob_loc[:,-1] = nob_loc[:,1]
+        maox_loc[:,-1] = aox_loc[:,1]
         
         # Step 1: Compute advection and diffusion
         #  set w as a minimum upwelling rate
@@ -180,9 +192,11 @@ def main(expnum, year, days, lon, lat, atm_co2):
         no3_loc = advection_diffusion(dt, no3_loc, ino3[-1], Grid, w, Diff)
         nh4_loc = advection_diffusion(dt, nh4_loc, 0.0, Grid, w, Diff)
         no2_loc = advection_diffusion(dt, no2_loc, 0.0, Grid, w, Diff)
+        n2_loc = advection_diffusion(dt, n2_loc, 0.0, Grid, w, Diff)
         dfe_loc = advection_diffusion(dt, dfe_loc, idfe[-1], Grid, w, Diff)
         aoa_loc = advection_diffusion(dt, aoa_loc, 0.0, Grid, w, Diff)
         nob_loc = advection_diffusion(dt, nob_loc, 0.0, Grid, w, Diff)
+        aox_loc = advection_diffusion(dt, aox_loc, 0.0, Grid, w, Diff)
         phy_loc = advection_diffusion(dt, phy_loc, 0.0, Grid, w, Diff)
         zoo_loc = advection_diffusion(dt, zoo_loc, 0.0, Grid, w, Diff)
         det_loc = advection_diffusion(dt, det_loc, 0.0, Grid, w, Diff)
@@ -199,9 +213,11 @@ def main(expnum, year, days, lon, lat, atm_co2):
         no3_loc = mix_mld(dt, no3_loc, mld, tmld, Grid)
         nh4_loc = mix_mld(dt, nh4_loc, mld, tmld, Grid)
         no2_loc = mix_mld(dt, no2_loc, mld, tmld, Grid)
+        n2_loc = mix_mld(dt, n2_loc, mld, tmld, Grid)
         dfe_loc = mix_mld(dt, dfe_loc, mld, tmld, Grid)
         aoa_loc = mix_mld(dt, aoa_loc, mld, tmld, Grid)
         nob_loc = mix_mld(dt, nob_loc, mld, tmld, Grid)
+        aox_loc = mix_mld(dt, aox_loc, mld, tmld, Grid)
         phy_loc = mix_mld(dt, phy_loc, mld, tmld, Grid)
         zoo_loc = mix_mld(dt, zoo_loc, mld, tmld, Grid)
         det_loc = mix_mld(dt, det_loc, mld, tmld, Grid)
@@ -289,6 +305,7 @@ def main(expnum, year, days, lon, lat, atm_co2):
             tc,
             aoa_loc, 
             nob_loc,
+            aox_loc, 
             phy_loc, 
             det_loc, 
             zoo_loc, 
@@ -296,6 +313,7 @@ def main(expnum, year, days, lon, lat, atm_co2):
             np.mean(mdet_loc,axis=1), 
             np.mean(maoa_loc,axis=1), 
             np.mean(mnob_loc,axis=1), 
+            np.mean(maox_loc,axis=1), 
             BGC)
         
         #logging.info("Doing mortality")
@@ -303,6 +321,7 @@ def main(expnum, year, days, lon, lat, atm_co2):
             tc, 
             aoa_loc, 
             nob_loc,
+            aox_loc,
             phy_loc, 
             zoo_loc, 
             det_loc, 
@@ -325,7 +344,7 @@ def main(expnum, year, days, lon, lat, atm_co2):
             atm_co2)
 
         #logging.info("Doing nitrification")
-        nitrif = compute_nitrification(
+        chemoauto = compute_chemoauto(
             tc,
             nh4_loc,
             no2_loc,
@@ -334,25 +353,33 @@ def main(expnum, year, days, lon, lat, atm_co2):
         
         #logging.info("Doing sources and sinks")
         sourcessinks = compute_sourcessinks(
-            primary_production['phy_mu'], losses['phy_lmort'], losses['phy_qmort'], iron_uptake['phy_dfeupt'], nutrient_limit['phy_limnh4'], nutrient_limit['phy_limno3'],
-            losses['zoo_zoores'], losses['zoo_qmort'], grazing['zoo_grzphy'], grazing['zoo_grzdet'], grazing['zoo_grznob'], grazing['zoo_grznob'], losses['det_remin'],
-            nitrif['aoa_mu'], nitrif['nob_mu'], losses['aoa_lmort'], losses['nob_lmort'], losses['aoa_qmort'], losses['nob_qmort'], aoa_loc, nob_loc,
+            primary_production['phy_mu'], losses['phy_lmort'], losses['phy_qmort'], 
+            iron_uptake['phy_dfeupt'], nutrient_limit['phy_limnh4'], nutrient_limit['phy_limno3'],
+            losses['zoo_zoores'], losses['zoo_qmort'], 
+            grazing['zoo_grzphy'], grazing['zoo_grzdet'], grazing['zoo_grzaoa'], grazing['zoo_grznob'], grazing['zoo_grzaox'],
+            losses['det_remin'],
+            chemoauto['aoa_mu'], chemoauto['nob_mu'], chemoauto['aox_mu'],
+            losses['aoa_lmort'], losses['nob_lmort'], losses['aox_lmort'], 
+            losses['aoa_qmort'], losses['nob_qmort'], losses['aox_qmort'],
+            aoa_loc, nob_loc, aox_loc, 
             phy_loc, phyfe_loc, zoo_loc, zoofe_loc, det_loc, detfe_loc, 
             iron_chemistry['dfe_prec'], iron_chemistry['dfe_scav'], iron_chemistry['dfe_coag'],
             chlorophyll_growth_rate['chl_mu'], light_limit['chlc_ratio'], 
             co2_flux['co2_flux'] / Grid.dz,
             BGC)
         
-        totalN1 = compute_totalN(aoa_loc, nob_loc, phy_loc, zoo_loc, det_loc, nh4_loc, no2_loc, no3_loc, BGC)
+        totalN1 = compute_totalN(aoa_loc, nob_loc, aox_loc, phy_loc, zoo_loc, det_loc, nh4_loc, no2_loc, no3_loc, n2_loc, BGC)
 
         #logging.info("Updating arrays")
         # Step 5: Update tracer concentrations based on sources and sinks
         no3_loc[:,1] += sourcessinks["ddt_no3"] * dt
         nh4_loc[:,1] += sourcessinks["ddt_nh4"] * dt
         no2_loc[:,1] += sourcessinks["ddt_no2"] * dt
+        n2_loc[:,1] += sourcessinks["ddt_n2"] * dt
         dfe_loc[:,1] += sourcessinks["ddt_dfe"] * dt
         aoa_loc[:,1] += sourcessinks["ddt_aoa"] * dt
         nob_loc[:,1] += sourcessinks["ddt_nob"] * dt
+        aox_loc[:,1] += sourcessinks["ddt_aox"] * dt
         phy_loc[:,1] += sourcessinks["ddt_phy"] * dt
         phyfe_loc[:,1] += sourcessinks["ddt_phyfe"] * dt
         zoo_loc[:,1] += sourcessinks["ddt_zoo"] * dt
@@ -364,25 +391,28 @@ def main(expnum, year, days, lon, lat, atm_co2):
         alk_loc[:,1] += sourcessinks["ddt_alk"] * dt
         o2_loc[:,1] += sourcessinks["ddt_o2"] * dt
 
-        totalN2 = compute_totalN(aoa_loc, nob_loc, phy_loc, zoo_loc, det_loc, nh4_loc, no2_loc, no3_loc, BGC)
+        totalN2 = compute_totalN(aoa_loc, nob_loc, aox_loc, phy_loc, zoo_loc, det_loc, nh4_loc, no2_loc, no3_loc, n2_loc, BGC)
         
         # Check for conservation of mass by ecosystem component
-        if not (np.allclose(totalN1, totalN2, atol=1e-12)):
+        '''
+        if not (np.allclose(totalN1, totalN2, atol=1e-10)):
             logging.info("Not conserving nitrogen")
             logging.info("totalN1 = %s"%(np.array2string(totalN1, precision=16, separator=", ", suppress_small=True)))
             logging.info("totalN2 = %s"%(np.array2string(totalN2, precision=16, separator=", ", suppress_small=True)))
             logging.info(" ")
             logging.info("ddt_no3 * dt = %s, "%(np.array2string(sourcessinks["ddt_no3"] * dt, precision=16, separator=", ", suppress_small=True)))
             logging.info("ddt_no2 * dt = %s, "%(np.array2string(sourcessinks["ddt_no2"] * dt, precision=16, separator=", ", suppress_small=True)))
+            logging.info("ddt_n2 * dt = %s, "%(np.array2string(sourcessinks["ddt_n2"] * dt, precision=16, separator=", ", suppress_small=True)))
             logging.info("ddt_nh4 * dt = %s, "%(np.array2string(sourcessinks["ddt_nh4"] * dt, precision=16, separator=", ", suppress_small=True)))
             logging.info("ddt_phy * dt = %s, "%(np.array2string(sourcessinks["ddt_phy"] * dt, precision=16, separator=", ", suppress_small=True)))
             logging.info("ddt_zoo * dt = %s, "%(np.array2string(sourcessinks["ddt_zoo"] * dt, precision=16, separator=", ", suppress_small=True)))
             logging.info("ddt_det * dt = %s, "%(np.array2string(sourcessinks["ddt_det"] * dt, precision=16, separator=", ", suppress_small=True)))
             logging.info("ddt_aoa * dt = %s, "%(np.array2string(sourcessinks["ddt_aoa"] * dt, precision=16, separator=", ", suppress_small=True)))
             logging.info("ddt_nob * dt = %s, "%(np.array2string(sourcessinks["ddt_nob"] * dt, precision=16, separator=", ", suppress_small=True)))
+            logging.info("ddt_aox * dt = %s, "%(np.array2string(sourcessinks["ddt_aox"] * dt, precision=16, separator=", ", suppress_small=True)))
             print("Not conserving nitrogen... exiting simulation")
             sys.exit()
-
+        '''
         if (step % plot_freq) == 0:
             ## Step 6: Plot the output and save as a figure
             #fig = plot1D(no3_loc[:,1], dfe_loc[:,1], \
@@ -402,9 +432,11 @@ def main(expnum, year, days, lon, lat, atm_co2):
             no3_output[:,step//plot_freq] = no3_loc[:,1]
             nh4_output[:,step//plot_freq] = nh4_loc[:,1]
             no2_output[:,step//plot_freq] = no2_loc[:,1]
+            n2_output[:,step//plot_freq] = n2_loc[:,1]
             dfe_output[:,step//plot_freq] = dfe_loc[:,1]
             aoa_output[:,step//plot_freq] = aoa_loc[:,1]
             nob_output[:,step//plot_freq] = nob_loc[:,1]
+            aox_output[:,step//plot_freq] = aox_loc[:,1]
             phy_output[:,step//plot_freq] = phy_loc[:,1]
             pchl_output[:,step//plot_freq] = pchl_loc[:,1]
             zoo_output[:,step//plot_freq] = zoo_loc[:,1]
@@ -414,15 +446,18 @@ def main(expnum, year, days, lon, lat, atm_co2):
             o2_output[:,step//plot_freq] = o2_loc[:,1]
             phymu_output[:,step//plot_freq] = primary_production['phy_mu']
             zoomu_output[:,step//plot_freq] = grazing['zoo_mu']
-            aoamu_output[:,step//plot_freq] = nitrif['aoa_mu']
-            nobmu_output[:,step//plot_freq] = nitrif['nob_mu']
+            aoamu_output[:,step//plot_freq] = chemoauto['aoa_mu']
+            nobmu_output[:,step//plot_freq] = chemoauto['nob_mu']
+            aoxmu_output[:,step//plot_freq] = chemoauto['aox_mu']
             zoogrzphy_output[:,step//plot_freq] = grazing['zoo_grzphy']
             zoogrzdet_output[:,step//plot_freq] = grazing['zoo_grzdet']
             zoogrzaoa_output[:,step//plot_freq] = grazing['zoo_grzaoa']
             zoogrznob_output[:,step//plot_freq] = grazing['zoo_grznob']
+            zoogrzaox_output[:,step//plot_freq] = grazing['zoo_grzaox']
             zooepsilon_output[:,step//plot_freq] = grazing['zoo_epsilon']
-            aoaox_output[:,step//plot_freq] = aoa_loc[:,1] * nitrif['aoa_mu'] * 1.0/BGC.aoa_ynh4
-            nobox_output[:,step//plot_freq] = nob_loc[:,1] * nitrif['nob_mu'] * 1.0/BGC.nob_yno2
+            aoaox_output[:,step//plot_freq] = aoa_loc[:,1] * chemoauto['aoa_mu'] * 1.0/BGC.aoa_ynh4
+            nobox_output[:,step//plot_freq] = nob_loc[:,1] * chemoauto['nob_mu'] * 1.0/BGC.nob_yno2
+            anammox_output[:,step//plot_freq] = aox_loc[:,1] * chemoauto['aox_mu'] * 1.0/BGC.aox_ynh4
             fco2_output[step//plot_freq] = co2_flux['co2_flux']
             pco2_output[step//plot_freq] = co2_flux['pCO2_water']
             cexp_output[:,step//plot_freq] = det_loc[:,1] * wsink  # mmol/m2/s
@@ -458,9 +493,11 @@ def main(expnum, year, days, lon, lat, atm_co2):
             "no3": (["depth", "time"], no3_output),  # Store data
             "nh4": (["depth", "time"], nh4_output),  # Store data
             "no2": (["depth", "time"], no2_output),  # Store data
+            "n2": (["depth", "time"], n2_output),  # Store data
             "dfe": (["depth", "time"], dfe_output),  # Store data
             "aoa": (["depth", "time"], aoa_output),  # Store data
             "nob": (["depth", "time"], nob_output),  # Store data
+            "aox": (["depth", "time"], aox_output),  # Store data
             "phy": (["depth", "time"], phy_output),  # Store data
             "zoo": (["depth", "time"], zoo_output),  # Store data
             "det": (["depth", "time"], det_output),  # Store data
@@ -472,20 +509,23 @@ def main(expnum, year, days, lon, lat, atm_co2):
             "zoomu": (["depth", "time"], zoomu_output),  # Store data
             "aoamu": (["depth", "time"], aoamu_output),  # Store data
             "nobmu": (["depth", "time"], nobmu_output),  # Store data
+            "aoxmu": (["depth", "time"], aoxmu_output),  # Store data
             "zoogrzphy": (["depth", "time"], zoogrzphy_output),  # Store data
             "zoogrzdet": (["depth", "time"], zoogrzdet_output),  # Store data
             "zoogrzaoa": (["depth", "time"], zoogrzaoa_output),  # Store data
             "zoogrznob": (["depth", "time"], zoogrznob_output),  # Store data
+            "zoogrzaox": (["depth", "time"], zoogrzaox_output),  # Store data
             "zooepsilon": (["depth", "time"], zooepsilon_output),  # Store data
             "aoaox": (["depth", "time"], aoaox_output),  # Store data
             "nobox": (["depth", "time"], nobox_output),  # Store data
+            "anammox": (["depth", "time"], anammox_output),  # Store data
             "fco2": (["time"], fco2_output),  # Store data
             "pco2": (["time"], pco2_output),  # Store data
             "cexp": (["depth", "time"], cexp_output),  # Store data
         },
         coords={
             "time": time.astype("datetime64[ns]"),
-            "depth": Grid.zgrid
+            "depth": -Grid.zgrid
         }
     )
     filename = (

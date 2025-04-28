@@ -35,10 +35,12 @@ class p_BGC:
                  zoo_respi=0.003, zoo_qmort=0.80, zoo_assim=0.6, zoo_excre=0.75, 
                  zoo_grz=3.0, zoo_epsmin=0.025, zoo_epsmax=0.25, zoo_epsrat=0.2, zoo_inerti=30.0, 
                  zoo_prefdet=0.50, detrem=0.50, w0=25.0,
-                 aoa_aT=0.5, nob_aT=1.0, chem_bT=1.020, 
-                 aoa_kn=0.1, nob_kn=0.1, aoa_pO2=275.0, nob_pO2=67.0, 
+                 aoa_aT=0.5, nob_aT=1.0, aox_aT=0.25, chem_bT=1.020, 
+                 aoa_kn=0.1, nob_kn=0.1, aox_knh4=0.45, aox_kno2=0.45, aoa_pO2=275.0, nob_pO2=67.0, 
                  aoa_ynh4=1.0/11.0, nob_yno2=1.0/27.8, aoa_yo2=1.0/15.5, nob_yo2=1.0/12.9, 
-                 aoa_Fe2C=20e-6, nob_Fe2C=20e-6, aoa_lmort=0.005, nob_lmort=0.005, aoa_qmort=0.05, nob_qmort=0.05):
+                 aox_ynh4=1.0/14.0, aox_yno2=1.0/16.2, aox_pno3=2.0,
+                 aoa_CN=5.0, nob_CN=5.0, aox_CN=5.0, aoa_Fe2C=20e-6, nob_Fe2C=20e-6, aox_Fe2C=100e-6, 
+                 aoa_lmort=0.0025, nob_lmort=0.005, aox_lmort=0.00125, aoa_qmort=0.05, nob_qmort=0.05, aox_qmort=0.05):
         self.d2s = 1.0 / 86400.0  # Conversion factor: days to seconds
         self.alpha = alpha  # PI curve slope for photosynthesis
         self.PAR_bio = 0.43  # Fraction of PAR available biologically
@@ -66,6 +68,7 @@ class p_BGC:
         self.zoo_prefdet = zoo_prefdet  # Zooplankton preference for detritus
         self.zoo_prefaoa = 1.0  # Zooplankton preference for AOA
         self.zoo_prefnob = 1.0  # Zooplankton preference for NOB
+        self.zoo_prefaox = 0.2  # Zooplankton preference for AOX
         self.zoo_qmort = zoo_qmort * self.d2s  # Quadratic mortality rate for zooplankton (/s)
         self.zoo_respi = zoo_respi * self.d2s  # Respiration rate for zooplankton (/s)
         self.zoo_assim = zoo_assim  # Zooplankton assimilation efficiency
@@ -77,21 +80,33 @@ class p_BGC:
         self.dfemin = 0.0001  # Minimum dFe concentration (µM)
         self.aoa_aT = aoa_aT  # Maximum growth rate scaling for Ammonium Oxidizing Archaea
         self.nob_aT = nob_aT  # Maximum growth rate scaling for Nitrite Oxidizing Bacteria
+        self.aox_aT = aox_aT  # Maximum growth rate scaling for Anammox Bacteria
         self.chem_bT = auto_bT  # Temperature dependence for chemautotrophs
         self.aoa_kn = aoa_kn  # Half-saturation constant for Ammonium for Ammonium Oxidizing Archaea
         self.nob_kn = nob_kn  # Half-saturation constant for Nitrite for Nitrite Oxidizing Bacteria
+        self.aox_knh4 = aox_knh4  # Half-saturation constant for Ammonium for Anammox Bacteria
+        self.aox_kno2 = aox_kno2  # Half-saturation constant for Nitrite for Anammox Bacteria
         self.aoa_pO2 = aoa_pO2  # diffusive oxygen coefficient for Ammonium for Ammonium Oxidizing Archaea
         self.nob_pO2 = nob_pO2  # diffusive oxygen coefficient for Nitrite for Nitrite Oxidizing Bacteria
         self.aoa_ynh4 = aoa_ynh4  # Growth yield on NH4 for Ammonium Oxidizing Archaea
         self.nob_yno2 = nob_yno2  # Growth yeild on NO2 for Nitrite Oxidizing Bacteria
         self.aoa_yo2 = aoa_yo2  # Growth yield on O2 for Ammonium Oxidizing Archaea
         self.nob_yo2 = nob_yo2  # Growth yeild on O2 for Nitrite Oxidizing Bacteria
+        self.aox_ynh4 = aox_ynh4  # Growth yield on NH4 for Anammox Bacteria
+        self.aox_yno2 = aox_yno2  # Growth yeild on NO2 for Anammox Bacteria
+        self.aox_pno3 = aox_pno3  # Production of NO3 by Anammox Bacteria
+        self.aoa_CN = aoa_CN  # C:N ratio for Ammonium Oxidizing Archaea
+        self.nob_CN = nob_CN  # C:N ratio for Nitrite Oxidizing Bacteria
+        self.aox_CN = aox_CN  # C:N ratio for Anammox Bacteria
         self.aoa_Fe2C = aoa_Fe2C  # Fe:C ratio for Ammonium Oxidizing Archaea
         self.nob_Fe2C = nob_Fe2C  # Fe:C ratio for Nitrite Oxidizing Bacteria
+        self.aox_Fe2C = aox_Fe2C  # Fe:C ratio for Anammox Bacteria
         self.aoa_lmort = aoa_lmort * self.d2s  # Linear mortality rate for AOA (/s)
         self.nob_lmort = nob_lmort * self.d2s  # Linear mortality rate for NOB (/s)
+        self.aox_lmort = aox_lmort * self.d2s  # Linear mortality rate for Anammox Bacteria (/s)
         self.aoa_qmort = aoa_qmort * self.d2s  # Quadratic mortality rate for AOA (/s)
         self.nob_qmort = nob_qmort * self.d2s  # Quadratic mortality rate for NOB (/s)
+        self.aox_qmort = aox_qmort * self.d2s  # Quadratic mortality rate for Anammox Bacteria (/s)
         
         
         

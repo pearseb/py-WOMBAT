@@ -12,8 +12,10 @@ def initialize_tracers(lat, lon, grid):
             - `no2` (np.ndarray): Nitrite concentration (µmol N/L).
             - `dfe` (np.ndarray): Dissolved iron concentration (µmol Fe/L).
             - `o2`  (np.ndarray): Dissolved oxygen concentration (µmol O2/L).
+            - `n2`  (np.ndarray): Dissolved oxygen concentration (µmol N2/L).
             - `aoa` (np.ndarray): AOA concentration (µmol C/L).
             - `nob` (np.ndarray): NOB concentration (µmol C/L).
+            - `aox` (np.ndarray): Anammox Bacteria concentration (µmol C/L).
             - `phy` (np.ndarray): Phytoplankton concentration (µmol C/L).
             - `zoo` (np.ndarray): Zooplankton concentration (µmol C/L).
             - `det` (np.ndarray): Detritus concentration (µmol C/L).
@@ -55,6 +57,7 @@ def initialize_tracers(lat, lon, grid):
     dfe = np.linspace(0.3 / 1000, 0.6 / 1000, grid.npt) # Dissolved iron (nM to µM)
     aoa = np.linspace(0.01, 0.0, grid.npt)              # AOA (µM C)
     nob = np.linspace(0.01, 0.0, grid.npt)              # NOB (µM C)
+    aox = np.linspace(0.01, 0.0, grid.npt)              # Anammox Bacteria (µM C)
     phy = np.linspace(0.01, 0.0, grid.npt)              # Phytoplankton (µM C)
     zoo = np.linspace(0.01, 0.0, grid.npt)             # Zooplankton (µM C)
     det = np.linspace(0.01, 0.0, grid.npt)             # Detritus (µM C)
@@ -68,7 +71,8 @@ def initialize_tracers(lat, lon, grid):
     no3 = allno3.values               # Oxygen (µM)
     nh4 = np.linspace(0.01, 0.001, grid.npt)              # NH4 (µM N)
     no2 = np.linspace(0.01, 0.001, grid.npt)              # NO2 (µM N)
-    
+    n2 = np.linspace(0.01, 0.001, grid.npt)               # N2 (µM N)
+
     tracers = {
         "no3": np.repeat(no3[:, np.newaxis], 2, axis=1),
         "nh4": np.repeat(nh4[:, np.newaxis], 2, axis=1),
@@ -76,6 +80,7 @@ def initialize_tracers(lat, lon, grid):
         "dfe": np.repeat(dfe[:, np.newaxis], 2, axis=1),
         "aoa": np.repeat(aoa[:, np.newaxis], 2, axis=1),
         "nob": np.repeat(nob[:, np.newaxis], 2, axis=1),
+        "aox": np.repeat(aox[:, np.newaxis], 2, axis=1),
         "phy": np.repeat(phy[:, np.newaxis], 2, axis=1),
         "zoo": np.repeat(zoo[:, np.newaxis], 2, axis=1),
         "det": np.repeat(det[:, np.newaxis], 2, axis=1),
@@ -86,6 +91,7 @@ def initialize_tracers(lat, lon, grid):
         "dic": np.repeat(dic[:, np.newaxis], 2, axis=1),
         "alk": np.repeat(alk[:, np.newaxis], 2, axis=1),
         "o2": np.repeat(o2[:, np.newaxis], 2, axis=1),
+        "n2": np.repeat(n2[:, np.newaxis], 2, axis=1),
         }
     
     return tracers

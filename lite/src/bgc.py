@@ -280,7 +280,8 @@ def compute_iron_uptake(phy_loc, phyfe_loc, dfe_loc, phy_mumax, phy_limdfe, phy_
 
 
 #@njit
-def compute_grazing(tc, aoa_loc, nob_loc, phy_loc, det_loc, zoo_loc, mphy_loc, mdet_loc, maoa_loc, mnob_loc, BGC):
+def compute_grazing(tc, o2_loc, aoa_loc, nob_loc, aox_loc, phy_loc, det_loc, zoo_loc, 
+                    mphy_loc, mdet_loc, maoa_loc, mnob_loc, maox_loc, BGC):
     """
     Compute zooplankton grazing rates on phytoplankton and detritus.
 
@@ -288,6 +289,7 @@ def compute_grazing(tc, aoa_loc, nob_loc, phy_loc, det_loc, zoo_loc, mphy_loc, m
         tc (float): Temperature (°C), affecting grazing rates.
         aoa_loc (np.ndarray): AOA concentration (µmolC/L).
         nob_loc (np.ndarray): NOB concentration (µmolC/L).
+        aox_loc (np.ndarray): Anammox concentration (µmolC/L).
         phy_loc (np.ndarray): Phytoplankton concentration (µmolC/L).
         det_loc (np.ndarray): Detritus concentration (µmolC/L).
         zoo_loc (np.ndarray): Zooplankton concentration (µmolC/L).
@@ -295,6 +297,7 @@ def compute_grazing(tc, aoa_loc, nob_loc, phy_loc, det_loc, zoo_loc, mphy_loc, m
         mdet_loc (np.ndarray): Long-term mean detritus concentration (µmolC/L).
         maoa_loc (np.ndarray): Long-term mean AOA concentration (µmolC/L).
         mnob_loc (np.ndarray): Long-term mean NOB concentration (µmolC/L).
+        maox_loc (np.ndarray): Long-term mean Anammox bacteria concentration (µmolC/L).
         
     Returns:
         dict: A dictionary containing:
@@ -305,11 +308,14 @@ def compute_grazing(tc, aoa_loc, nob_loc, phy_loc, det_loc, zoo_loc, mphy_loc, m
             - `zoo_grzdet` (np.ndarray): Grazing rate on detritus (µmolC/L/s).
             - `zoo_grzaoa` (np.ndarray): Grazing rate on AOA (µmolC/L/s).
             - `zoo_grznob` (np.ndarray): Grazing rate on NOB (µmolC/L/s).
+            - `zoo_grzaox` (np.ndarray): Grazing rate on Anammox bacteria (µmolC/L/s).
+            
     """
     
     # Non-zero tracers
     aoa_loc = np.fmax(0.0, aoa_loc[:,1])
     nob_loc = np.fmax(0.0, nob_loc[:,1])
+    aox_loc = np.fmax(0.0, aox_loc[:,1])
     phy_loc = np.fmax(0.0, phy_loc[:,1])
     det_loc = np.fmax(0.0, det_loc[:,1])
     zoo_loc = np.fmax(0.0, zoo_loc[:,1])
@@ -320,9 +326,11 @@ def compute_grazing(tc, aoa_loc, nob_loc, phy_loc, det_loc, zoo_loc, mphy_loc, m
 
     # Prey availability
     prey = np.fmax(0.0, phy_loc) * BGC.zoo_prefphy + np.fmax(0.0, det_loc) * BGC.zoo_prefdet \
-           + np.fmax(0.0, aoa_loc) * BGC.zoo_prefaoa + np.fmax(0.0, nob_loc) * BGC.zoo_prefnob
+           + np.fmax(0.0, aoa_loc) * BGC.zoo_prefaoa + np.fmax(0.0, nob_loc) * BGC.zoo_prefnob \
+           + np.fmax(0.0, aox_loc) * BGC.zoo_prefaox
     mprey = np.fmax(0.0, mphy_loc) * BGC.zoo_prefphy + np.fmax(0.0, mdet_loc) * BGC.zoo_prefdet \
-           + np.fmax(0.0, maoa_loc) * BGC.zoo_prefaoa + np.fmax(0.0, mnob_loc) * BGC.zoo_prefnob
+           + np.fmax(0.0, maoa_loc) * BGC.zoo_prefaoa + np.fmax(0.0, mnob_loc) * BGC.zoo_prefnob \
+           + np.fmax(0.0, maox_loc) * BGC.zoo_prefaox
 
     # Prey capture rate based on grazing formulation
     zoo_peffect = np.exp(-mprey * BGC.zoo_epsrat)
@@ -337,6 +345,7 @@ def compute_grazing(tc, aoa_loc, nob_loc, phy_loc, det_loc, zoo_loc, mphy_loc, m
     zoo_grzdet = np.zeros(len(phy_loc))
     zoo_grzaoa = np.zeros(len(phy_loc))
     zoo_grznob = np.zeros(len(phy_loc))
+    zoo_grzaox = np.zeros(len(phy_loc))
     valid_indices = prey > BGC.biomin
     zoo_grzphy[valid_indices] = (
         zoo_mu[valid_indices] * zoo_loc[valid_indices] * np.fmax(phy_loc[valid_indices],0.0) * BGC.zoo_prefphy / prey[valid_indices]
@@ -350,6 +359,9 @@ def compute_grazing(tc, aoa_loc, nob_loc, phy_loc, det_loc, zoo_loc, mphy_loc, m
     zoo_grznob[valid_indices] = (
         zoo_mu[valid_indices] * zoo_loc[valid_indices] * np.fmax(nob_loc[valid_indices],0.0) * BGC.zoo_prefnob / prey[valid_indices]
     )
+    zoo_grzaox[valid_indices] = (
+        zoo_mu[valid_indices] * zoo_loc[valid_indices] * np.fmax(aox_loc[valid_indices],0.0) * BGC.zoo_prefaox / prey[valid_indices]
+    )
     
     return {
         "zoo_mumax": zoo_mumax,
@@ -359,11 +371,12 @@ def compute_grazing(tc, aoa_loc, nob_loc, phy_loc, det_loc, zoo_loc, mphy_loc, m
         "zoo_grzdet": zoo_grzdet,
         "zoo_grzaoa": zoo_grzaoa,
         "zoo_grznob": zoo_grznob,
+        "zoo_grzaox": zoo_grzaox,
     }
 
 
 #@njit
-def compute_losses(tc, aoa_loc, nob_loc, phy_loc, zoo_loc, det_loc, BGC):
+def compute_losses(tc, aoa_loc, nob_loc, aox_loc, phy_loc, zoo_loc, det_loc, BGC):
     """
     Compute loss terms for phytoplankton and zooplankton and detritus.
 
@@ -371,6 +384,7 @@ def compute_losses(tc, aoa_loc, nob_loc, phy_loc, zoo_loc, det_loc, BGC):
         tc (float): Temperature (°C), affecting metabolic rates.
         aoa_loc (np.ndarray): AOA concentration (µmolC/L).
         nob_loc (np.ndarray): NOB concentration (µmolC/L).
+        aox_loc (np.ndarray): Anammox Bacteria concentration (µmolC/L).
         phy_loc (np.ndarray): Phytoplankton concentration (µmolC/L).
         zoo_loc (np.ndarray): Zooplankton concentration (µmolC/L).
         det_loc (np.ndarray): Detritus concentration (µmolC/L).
@@ -384,14 +398,17 @@ def compute_losses(tc, aoa_loc, nob_loc, phy_loc, zoo_loc, det_loc, BGC):
             - `det_remin` (np.ndarray): Remineralisation rate of detritus (µmolC/L/s).
             - `aoa_lmort` (np.ndarray): Linear mortality rate for AOA (µmolC/L/s).
             - `nob_lmort` (np.ndarray): Linear mortality rate for NOB (µmolC/L/s).
+            - `aox_lmort` (np.ndarray): Linear mortality rate for Anammox Bacteria (µmolC/L/s).
             - `aoa_qmort` (np.ndarray): Quadratic mortality rate for AOA (µmolC/L/s).
             - `nob_qmort` (np.ndarray): Quadratic mortality rate for NOB (µmolC/L/s).
+            - `aox_qmort` (np.ndarray): Quadratic mortality rate for Anammox Bacteria (µmolC/L/s).
             
     """
     
     # Non-zero tracers
     aoa_loc = np.fmax(0.0, aoa_loc[:,1])
     nob_loc = np.fmax(0.0, nob_loc[:,1])
+    aox_loc = np.fmax(0.0, aox_loc[:,1])
     phy_loc = np.fmax(0.0, phy_loc[:,1])
     zoo_loc = np.fmax(0.0, zoo_loc[:,1])
     det_loc = np.fmax(0.0, det_loc[:,1])
@@ -404,6 +421,8 @@ def compute_losses(tc, aoa_loc, nob_loc, phy_loc, zoo_loc, det_loc, BGC):
     aoa_qmort = np.zeros(len(phy_loc))
     nob_lmort = np.zeros(len(phy_loc))
     nob_qmort = np.zeros(len(phy_loc))
+    aox_lmort = np.zeros(len(phy_loc))
+    aox_qmort = np.zeros(len(phy_loc))
     phy_lmort = np.zeros(len(phy_loc))
     phy_qmort = np.zeros(len(phy_loc))
     zoo_zoores = np.zeros(len(phy_loc))
@@ -433,6 +452,12 @@ def compute_losses(tc, aoa_loc, nob_loc, phy_loc, zoo_loc, det_loc, BGC):
         BGC.nob_lmort * nob_loc[valid_nob] * Tfunc_hete[valid_nob]
     )
 
+    # Anammox Bacteria linear mortality
+    valid_aox = aox_loc > BGC.biomin
+    aox_lmort[valid_aox] = (
+        BGC.aox_lmort * aox_loc[valid_aox] * Tfunc_hete[valid_aox]
+    )
+
     # AOA quadratic mortality
     aoa_qmort[valid_aoa] = (
         BGC.aoa_qmort * aoa_loc[valid_aoa]**2.0
@@ -441,6 +466,11 @@ def compute_losses(tc, aoa_loc, nob_loc, phy_loc, zoo_loc, det_loc, BGC):
     # NOB quadratic mortality
     nob_qmort[valid_nob] = (
         BGC.nob_qmort * nob_loc[valid_nob]**2.0
+    )
+
+    # Anammox Bacteria quadratic mortality
+    aox_qmort[valid_aox] = (
+        BGC.aox_qmort * aox_loc[valid_aox]**2.0
     )
 
     # Zooplankton respiration
@@ -466,6 +496,8 @@ def compute_losses(tc, aoa_loc, nob_loc, phy_loc, zoo_loc, det_loc, BGC):
         "aoa_qmort": aoa_qmort,
         "nob_lmort": nob_lmort,
         "nob_qmort": nob_qmort,
+        "aox_lmort": aox_lmort,
+        "aox_qmort": aox_qmort,
         "zoo_zoores": zoo_zoores,
         "zoo_qmort": zoo_qmort,
         "det_remin": det_remin,
@@ -591,14 +623,15 @@ def compute_co2_flux(dic_surface, alk_surface, sst, wind_speed, atm_co2):
 
 
 #@njit
-def compute_nitrification(tc, nh4_loc, no2_loc, o2_loc, BGC):
+def compute_chemoauto(tc, nh4_loc, no2_loc, o2_loc, BGC):
     """
-    Simulate nitrification by AOA and NOB considering nutrient limitations.
+    Simulate chemoautorophic metabolism by AOA, NOB and Anammox Bacteria considering resource limitations.
 
     Inputs:
         - tc (float or np.ndarray): Temperature (°C), which influences the maximum growth rate.
         - nh4_loc (np.ndarray): Ammonium concentration (µmolN/L).
         - no2_loc (np.ndarray): Nitrite concentration (µmolN/L).
+        - o2_loc (np.ndarray): Dissolved pxygen concentration (µmolO2/L).
         
     Returns:
         dict: A dictionary containing the following keys:
@@ -606,14 +639,21 @@ def compute_nitrification(tc, nh4_loc, no2_loc, o2_loc, BGC):
            This is the theoretical upper limit of AOA growth rate at the given temperature.
         - `nob_mumax` (float or np.ndarray): Temperature-dependent maximum growth rate (s⁻¹).
            This is the theoretical upper limit of NOB growth rate at the given temperature.
+        - `aox_mumax` (float or np.ndarray): Temperature-dependent maximum growth rate (s⁻¹).
+           This is the theoretical upper limit of Anammox Bacteria growth rate at the given temperature.
         - `aoa_limnh4` (np.ndarray): Limitation by ammonium availability (). 
         - `nob_limno2` (np.ndarray): Limitation by nitrite availability (). 
         - `aoa_limo2` (np.ndarray): Limitation by O2 availability (). 
         - `nob_limo2` (np.ndarray): Limitation by O2 availability (). 
+        - `aox_limnh4` (np.ndarray): Limitation by ammonium availability (). 
+        - `aox_limno2` (np.ndarray): Limitation by nitrite availability (). 
         - `aoa_mu` (np.ndarray): Realized AOA growth rate (s⁻¹), incorporating 
-           nutrient limitation. This is the product of `phy_mumax` and `phy_limnh4`.
+           nutrient limitation. This is the product of `aoa_mumax` and the minimum of `aoa_limnh4` and `aoa_limo2`.
         - `nob_mu` (np.ndarray): Realized NOB growth rate (s⁻¹), incorporating 
-           nutrient limitation. This is the product of `phy_mumax` and `phy_limnh4`.
+           nutrient limitation. This is the product of `nob_mumax` and the minimum of `nob_limnh4` and `nob_limo2`.
+        - `aox_mu` (np.ndarray): Realized Anammox Bacteria growth rate (s⁻¹), incorporating 
+           nutrient limitation. This is the product of `aox_mumax` and the minimum of `aox_limnh4` and `aox_limno2`.
+        
     """
     
     # Constants
@@ -626,11 +666,14 @@ def compute_nitrification(tc, nh4_loc, no2_loc, o2_loc, BGC):
     # Maximum growth rate
     aoa_mumax = BGC.aoa_aT * BGC.chem_bT**(tc) * d2s
     nob_mumax = BGC.nob_aT * BGC.chem_bT**(tc) * d2s
-
+    aox_mumax = BGC.aox_aT * BGC.chem_bT**(tc) * d2s
+    
     # Nutrient limitation
     aoa_limnh4 = nh4_loc / (BGC.aoa_kn + nh4_loc)
     nob_limno2 = no2_loc / (BGC.nob_kn + no2_loc)
-
+    aox_limnh4 = nh4_loc / (BGC.aox_knh4 + nh4_loc)
+    aox_limno2 = no2_loc / (BGC.aox_kno2 + no2_loc)
+    
     # Oxygen limitation
     aoa_limo2 = o2_loc * BGC.aoa_pO2 * BGC.aoa_yo2
     nob_limo2 = o2_loc * BGC.nob_pO2 * BGC.nob_yo2
@@ -638,7 +681,8 @@ def compute_nitrification(tc, nh4_loc, no2_loc, o2_loc, BGC):
     # Apply nutrient limitation
     aoa_mu = aoa_mumax * np.fmin(aoa_limnh4, aoa_limo2)
     nob_mu = nob_mumax * np.fmin(nob_limno2, nob_limo2)
-
+    aox_mu = aox_mumax * np.fmin(aox_limnh4, aox_limno2)
+    
     return {
         "aoa_mumax": aoa_mumax,
         "aoa_limnh4": aoa_limnh4,
@@ -648,13 +692,18 @@ def compute_nitrification(tc, nh4_loc, no2_loc, o2_loc, BGC):
         "nob_limno2": nob_limno2,
         "nob_limo2": nob_limo2,
         "nob_mu": nob_mu,
+        "aox_mumax": aox_mumax,
+        "aox_limnh4": aox_limnh4,
+        "aox_limno2": aox_limno2,
+        "aox_mu": aox_mu,
     }
 
 
 #@njit
 def compute_sourcessinks(phy_mu, phy_lmort, phy_qmort, phy_dfeupt, phy_limnh4, phy_limno3,
-                         zoo_zoores, zoo_qmort, zoo_grzphy, zoo_grzdet, zoo_grzaoa, zoo_grznob, det_remin,
-                         aoa_mu, nob_mu, aoa_lmort, nob_lmort, aoa_qmort, nob_qmort, aoa_loc, nob_loc,
+                         zoo_zoores, zoo_qmort, zoo_grzphy, zoo_grzdet, zoo_grzaoa, zoo_grznob, zoo_grzaox, det_remin,
+                         aoa_mu, nob_mu, aox_mu, aoa_lmort, nob_lmort, aox_lmort, aoa_qmort, nob_qmort, aox_qmort,
+                         aoa_loc, nob_loc, aox_loc,
                          phy_loc, phyfe_loc, zoo_loc, zoofe_loc, det_loc, detfe_loc, 
                          dfe_prec, dfe_scav, dfe_coag,
                          chl_mu, chlc_ratio, 
@@ -676,13 +725,17 @@ def compute_sourcessinks(phy_mu, phy_lmort, phy_qmort, phy_dfeupt, phy_limnh4, p
         - zoo_grzdet (np.ndarray): Grazing rate on detritus (µmolC/L/s).
         - zoo_grzaoa (np.ndarray): Grazing rate on AOA (µmolC/L/s).
         - zoo_grznob (np.ndarray): Grazing rate on NOB (µmolC/L/s).
+        - zoo_grzaox (np.ndarray): Grazing rate on Anammox Bacteria (µmolC/L/s).
         - det_remin (np.ndarray): Detritus remineralization rate (µmolC/L/s).
         - aoa_mu (np.ndarray): Realized AOA growth rate (s⁻¹).
         - nob_mu (np.ndarray): Realized NOB growth rate (s⁻¹).
+        - aox_mu (np.ndarray): Realized Anammox Bacteria growth rate (s⁻¹).
         - aoa_lmort (np.ndarray): Linear mortality rate for AOA (µmolC/L/s).
         - nob_lmort (np.ndarray): Linear mortality rate for NOB (µmolC/L/s).
+        - aox_lmort (np.ndarray): Linear mortality rate for Anammox Bacteria (µmolC/L/s).
         - aoa_qmort (np.ndarray): Quadratic mortality rate for AOA (µmolC/L/s).
         - nob_qmort (np.ndarray): Quadratic mortality rate for NOB (µmolC/L/s).
+        - aox_qmort (np.ndarray): Quadratic mortality rate for Anammox Bacteria (µmolC/L/s).
         
         - phyFeC (np.ndarray): Phytoplankton iron-to-carbon ratio.
         - zooFeC (np.ndarray): Zooplankton iron-to-carbon ratio.
@@ -700,9 +753,11 @@ def compute_sourcessinks(phy_mu, phy_lmort, phy_qmort, phy_dfeupt, phy_limnh4, p
             - `ddt_no3` (np.ndarray): Tendency for nitrate concentration (µmolN/L/s).
             - `ddt_nh4` (np.ndarray): Tendency for ammonium concentration (µmolN/L/s).
             - `ddt_no2` (np.ndarray): Tendency for nitrite concentration (µmolN/L/s).
+            - `ddt_n2` (np.ndarray): Tendency for dinitrogen gas concentration (µmolN2/L/s).
             - `ddt_dfe` (np.ndarray): Tendency for dissolved iron concentration (µmolFe/L/s).
             - `ddt_aoa` (np.ndarray): Tendency for AOA concentration (µmolC/L/s).
             - `ddt_nob` (np.ndarray): Tendency for NOB concentration (µmolC/L/s).
+            - `ddt_aox` (np.ndarray): Tendency for Anammox Bacteria concentration (µmolC/L/s).
             - `ddt_phy` (np.ndarray): Tendency for phytoplankton concentration (µmolC/L/s).
             - `ddt_phyfe` (np.ndarray): Tendency for phytoplankton iron (µmolFe/L/s).
             - `ddt_zoo` (np.ndarray): Tendency for zooplankton concentration (µmolC/L/s).
@@ -718,6 +773,7 @@ def compute_sourcessinks(phy_mu, phy_lmort, phy_qmort, phy_dfeupt, phy_limnh4, p
     # Non-zero tracers
     aoa_loc = np.fmax(0.0, aoa_loc[:,1])
     nob_loc = np.fmax(0.0, nob_loc[:,1])
+    aox_loc = np.fmax(0.0, aox_loc[:,1])
     phy_loc = np.fmax(0.0, phy_loc[:,1])
     zoo_loc = np.fmax(0.0, zoo_loc[:,1])
     det_loc = np.fmax(0.0, det_loc[:,1])
@@ -736,22 +792,31 @@ def compute_sourcessinks(phy_mu, phy_lmort, phy_qmort, phy_dfeupt, phy_limnh4, p
     # Compute tracer tendencies
     ddt_no3 = (
         nob_mu * nob_loc * 1.0/BGC.nob_yno2
+        + aox_mu * aox_loc * BGC.aox_pno3
         - phy_mu * phy_loc * (phy_limno3 / (phy_limnh4 + phy_limno3)) / BGC.phy_CN
     )
 
     ddt_no2 = (
-        aoa_mu * aoa_loc * (1.0/BGC.aoa_ynh4 - 1.0/BGC.phy_CN) 
+        aoa_mu * aoa_loc * (1.0/BGC.aoa_ynh4 - 1.0/BGC.aoa_CN) 
         - nob_mu * nob_loc * 1.0/BGC.nob_yno2
+        - aox_mu * aox_loc * 1.0/BGC.aox_yno2
     )
 
     ddt_nh4 = (
-        (phy_lmort + aoa_lmort + nob_lmort + zoo_zoores + det_remin 
-         + (1.0 - BGC.zoo_assim) * BGC.zoo_excre * (zoo_grzphy + zoo_grzdet + zoo_grzaoa + zoo_grznob)) / BGC.phy_CN
+        (phy_lmort + zoo_zoores + det_remin + (1.0 - BGC.zoo_assim) * BGC.zoo_excre 
+         * (zoo_grzphy + zoo_grzdet)) / BGC.phy_CN
+        + (aoa_lmort + (1.0 - BGC.zoo_assim) * BGC.zoo_excre * zoo_grzaoa) / BGC.aoa_CN
+        + (nob_lmort + (1.0 - BGC.zoo_assim) * BGC.zoo_excre * zoo_grznob) / BGC.nob_CN
+        + (aox_lmort + (1.0 - BGC.zoo_assim) * BGC.zoo_excre * zoo_grzaox) / BGC.aox_CN
         - phy_mu * phy_loc * (phy_limnh4 / (phy_limnh4 + phy_limno3) ) / BGC.phy_CN
         - aoa_mu * aoa_loc * 1.0/BGC.aoa_ynh4
-        - nob_mu * nob_loc * 1.0/BGC.phy_CN
+        - nob_mu * nob_loc * 1.0/BGC.nob_CN
+        - aox_mu * aox_loc * 1.0/BGC.aox_ynh4
     )
-        
+    
+    ddt_n2 = (
+        aox_mu * aox_loc * 1.0/BGC.aox_ynh4
+    )
 
     ddt_o2 = (
         phy_mu * phy_loc / BGC.phy_CO 
@@ -762,36 +827,44 @@ def compute_sourcessinks(phy_mu, phy_lmort, phy_qmort, phy_dfeupt, phy_limnh4, p
     )
 
     ddt_dfe = (
-        (phy_lmort * phyFeC + zoo_zoores * zooFeC + aoa_lmort * BGC.aoa_Fe2C + nob_lmort * BGC.nob_lmort + det_remin * detFeC 
-         + (1.0 - BGC.zoo_assim) * BGC.zoo_excre * (zoo_grzphy * phyFeC + zoo_grzdet * detFeC + zoo_grzaoa * BGC.aoa_Fe2C + zoo_grznob * BGC.nob_Fe2C))
+        (phy_lmort * phyFeC + zoo_zoores * zooFeC + det_remin * detFeC 
+         + aoa_lmort * BGC.aoa_Fe2C + nob_lmort * BGC.nob_Fe2C + aox_lmort * BGC.aox_Fe2C 
+         + (1.0 - BGC.zoo_assim) * BGC.zoo_excre 
+         * (zoo_grzphy * phyFeC + zoo_grzdet * detFeC 
+            + zoo_grzaoa * BGC.aoa_Fe2C + zoo_grznob * BGC.nob_Fe2C + zoo_grzaox * BGC.aox_Fe2C))
         - phy_dfeupt - dfe_prec - dfe_scav - dfe_coag
         - aoa_mu * aoa_loc * BGC.aoa_Fe2C
         - nob_mu * nob_loc * BGC.nob_Fe2C
+        - aox_mu * aox_loc * BGC.aox_Fe2C
     )
 
     ddt_aoa = aoa_mu * aoa_loc - (aoa_lmort + aoa_qmort + zoo_grzaoa)
     ddt_nob = nob_mu * nob_loc - (nob_lmort + nob_qmort + zoo_grznob)
-
+    ddt_aox = aox_mu * aox_loc - (aox_lmort + aox_qmort + zoo_grzaox)
+    
     ddt_phy = phy_mu * phy_loc - (phy_lmort + phy_qmort + zoo_grzphy)
 
     ddt_phyfe = phy_dfeupt - (phy_lmort + phy_qmort + zoo_grzphy) * phyFeC
 
-    ddt_zoo = (zoo_grzphy + zoo_grzdet + zoo_grzaoa + zoo_grznob) * BGC.zoo_assim - (zoo_zoores + zoo_qmort)
+    ddt_zoo = (zoo_grzphy + zoo_grzdet + zoo_grzaoa + zoo_grznob + zoo_grzaox) * BGC.zoo_assim - (zoo_zoores + zoo_qmort)
 
     ddt_zoofe = (
-        (zoo_grzphy * phyFeC + zoo_grzdet * detFeC + zoo_grzaoa * BGC.aoa_Fe2C + zoo_grznob * BGC.nob_Fe2C) * BGC.zoo_assim
+        (zoo_grzphy * phyFeC + zoo_grzdet * detFeC 
+         + zoo_grzaoa * BGC.aoa_Fe2C + zoo_grznob * BGC.nob_Fe2C + zoo_grzaox * BGC.aox_Fe2C) * BGC.zoo_assim
         - (zoo_zoores + zoo_qmort) * zooFeC
     )
 
     ddt_det = (
-        (zoo_grzphy + zoo_grzdet + zoo_grzaoa + zoo_grznob) * (1.0 - BGC.zoo_assim) * (1.0 - BGC.zoo_excre)
-        + phy_qmort + zoo_qmort + aoa_qmort + nob_qmort 
+        (zoo_grzphy + zoo_grzdet + zoo_grzaoa + zoo_grznob + zoo_grzaox) * (1.0 - BGC.zoo_assim) * (1.0 - BGC.zoo_excre)
+        + phy_qmort + zoo_qmort + aoa_qmort + nob_qmort + aox_qmort
         - det_remin - zoo_grzdet
     )
 
     ddt_detfe = (
-        (zoo_grzphy * phyFeC + zoo_grzdet * detFeC + zoo_grzaoa * BGC.aoa_Fe2C + zoo_grznob * BGC.nob_Fe2C) * (1.0 - BGC.zoo_assim) * (1.0 - BGC.zoo_excre)
-        + phy_qmort * phyFeC + zoo_qmort * zooFeC + aoa_qmort * BGC.aoa_Fe2C + nob_qmort * BGC.aoa_Fe2C
+        (zoo_grzphy * phyFeC + zoo_grzdet * detFeC 
+         + zoo_grzaoa * BGC.aoa_Fe2C + zoo_grznob * BGC.nob_Fe2C + zoo_grzaox * BGC.aox_Fe2C) 
+        * (1.0 - BGC.zoo_assim) * (1.0 - BGC.zoo_excre)
+        + phy_qmort * phyFeC + zoo_qmort * zooFeC + aoa_qmort * BGC.aoa_Fe2C + nob_qmort * BGC.aoa_Fe2C + aox_qmort * BGC.aox_Fe2C
         - (det_remin + zoo_grzdet) * detFeC
         + dfe_scav + dfe_coag
     )
@@ -806,9 +879,11 @@ def compute_sourcessinks(phy_mu, phy_lmort, phy_qmort, phy_dfeupt, phy_limnh4, p
         "ddt_no3": ddt_no3,
         "ddt_nh4": ddt_nh4,
         "ddt_no2": ddt_no2,
+        "ddt_n2": ddt_n2,
         "ddt_dfe": ddt_dfe,
         "ddt_aoa": ddt_aoa,
         "ddt_nob": ddt_nob,
+        "ddt_aox": ddt_aox,
         "ddt_phy": ddt_phy,
         "ddt_phyfe": ddt_phyfe,
         "ddt_zoo": ddt_zoo,
@@ -823,19 +898,21 @@ def compute_sourcessinks(phy_mu, phy_lmort, phy_qmort, phy_dfeupt, phy_limnh4, p
 
 
 #@njit
-def compute_totalN(aoa_loc, nob_loc, phy_loc, zoo_loc, det_loc, nh4_loc, no2_loc, no3_loc, BGC):
+def compute_totalN(aoa_loc, nob_loc, aox_loc, phy_loc, zoo_loc, det_loc, nh4_loc, no2_loc, no3_loc, n2_loc, BGC):
     """
     Returns total N.
 
     Parameters:
         - aoa_loc (np.ndarray): AOA carbon biomass.
         - nob_loc (np.ndarray): NOB carbon biomass.
+        - aox_loc (np.ndarray): Anammox Bacteria carbon biomass.
         - phy_loc (np.ndarray): Phytoplankton carbon biomass.
         - zoo_loc (np.ndarray): Zooplankton carbon biomass.
         - det_loc (np.ndarray): Detrital carbon biomass.
         - nh4_loc (np.ndarray): Ammonium concentration.
         - no2_loc (np.ndarray): Nitrite concentration.
         - no3_loc (np.ndarray): Nitrate concentration.        
+        - n2_loc (np.ndarray): Dinitrogen gas concentration.        
         
     Returns:
         dict: A dictionary containing:
@@ -843,7 +920,8 @@ def compute_totalN(aoa_loc, nob_loc, phy_loc, zoo_loc, det_loc, nh4_loc, no2_loc
             
     """
 
-    totalN = (aoa_loc[:,1] + nob_loc[:,1] + phy_loc[:,1] + zoo_loc[:,1] + det_loc[:,1]) / BGC.phy_CN \
-        + nh4_loc[:,1] + no2_loc[:,1] + no3_loc[:,1]
+    totalN = aoa_loc[:,1] / BGC.aoa_CN + nob_loc[:,1] / BGC.nob_CN + aox_loc[:,1] / BGC.aox_CN \
+              + (phy_loc[:,1] + zoo_loc[:,1] + det_loc[:,1]) / BGC.phy_CN \
+              + nh4_loc[:,1] + no2_loc[:,1] + no3_loc[:,1] + n2_loc[:,1]*2.0
     return totalN
 
