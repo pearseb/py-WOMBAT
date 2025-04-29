@@ -287,6 +287,7 @@ def compute_grazing(tc, o2_loc, aoa_loc, nob_loc, aox_loc, phy_loc, det_loc, zoo
 
     Parameters:
         tc (float): Temperature (°C), affecting grazing rates.
+        o2_loc (np.ndarray): Dissolved oxygen concentration (µmolO2/L).
         aoa_loc (np.ndarray): AOA concentration (µmolC/L).
         nob_loc (np.ndarray): NOB concentration (µmolC/L).
         aox_loc (np.ndarray): Anammox concentration (µmolC/L).
@@ -313,6 +314,7 @@ def compute_grazing(tc, o2_loc, aoa_loc, nob_loc, aox_loc, phy_loc, det_loc, zoo
     """
     
     # Non-zero tracers
+    o2_loc = np.fmax(0.0, o2_loc[:,1])
     aoa_loc = np.fmax(0.0, aoa_loc[:,1])
     nob_loc = np.fmax(0.0, nob_loc[:,1])
     aox_loc = np.fmax(0.0, aox_loc[:,1])
@@ -323,6 +325,9 @@ def compute_grazing(tc, o2_loc, aoa_loc, nob_loc, aox_loc, phy_loc, det_loc, zoo
     # Maximum grazing rate
     Tfunc_hete = BGC.hete_aT * BGC.hete_bT**(tc)
     zoo_mumax = BGC.zoo_grz * Tfunc_hete
+
+    # Oxygen limitation function
+    zoo_oeffect = 1.0 - np.fmin(1.0, np.fmax(0.0, np.exp(-o2_loc/10.0)))
 
     # Prey availability
     prey = np.fmax(0.0, phy_loc) * BGC.zoo_prefphy + np.fmax(0.0, det_loc) * BGC.zoo_prefdet \
@@ -338,7 +343,7 @@ def compute_grazing(tc, o2_loc, aoa_loc, nob_loc, aox_loc, phy_loc, det_loc, zoo
     
     # Realized grazing rate
     zoo_capt = zoo_epsilon * prey**2
-    zoo_mu = zoo_mumax * zoo_capt / (zoo_mumax + zoo_capt)
+    zoo_mu = zoo_mumax * zoo_capt / (zoo_mumax + zoo_capt) * zoo_oeffect
 
     # Grazing rates on phytoplankton and detritus
     zoo_grzphy = np.zeros(len(phy_loc))
@@ -871,9 +876,18 @@ def compute_sourcessinks(phy_mu, phy_lmort, phy_qmort, phy_dfeupt, phy_limnh4, p
 
     ddt_pchl = chl_mu - chlc_ratio * (phy_lmort + phy_qmort + zoo_grzphy) * 12
     
-    ddt_dic = ddt_nh4 * BGC.phy_CN
-    ddt_dic[0] = ddt_nh4[0] + co2_flux
-    ddt_alk = ddt_no3 * (-1.0)
+    ddt_dic = (
+        (phy_lmort + zoo_zoores + det_remin + (1.0 - BGC.zoo_assim) * BGC.zoo_excre * (zoo_grzphy + zoo_grzdet))
+        + (aoa_lmort + (1.0 - BGC.zoo_assim) * BGC.zoo_excre * zoo_grzaoa)
+        + (nob_lmort + (1.0 - BGC.zoo_assim) * BGC.zoo_excre * zoo_grznob)
+        + (aox_lmort + (1.0 - BGC.zoo_assim) * BGC.zoo_excre * zoo_grzaox)
+        - phy_mu * phy_loc 
+        - aoa_mu * aoa_loc
+        - nob_mu * nob_loc
+        - aox_mu * aox_loc
+    )
+    ddt_dic[0] = ddt_dic[0] + co2_flux
+    ddt_alk = ddt_nh4 - ddt_no2 - ddt_no3
 
     return {
         "ddt_no3": ddt_no3,
@@ -925,3 +939,27 @@ def compute_totalN(aoa_loc, nob_loc, aox_loc, phy_loc, zoo_loc, det_loc, nh4_loc
               + nh4_loc[:,1] + no2_loc[:,1] + no3_loc[:,1] + n2_loc[:,1]*2.0
     return totalN
 
+#@njit
+def compute_totalC(aoa_loc, nob_loc, aox_loc, phy_loc, zoo_loc, det_loc, dic_loc, co2_flux):
+    """
+    Returns total C.
+
+    Parameters:
+        - aoa_loc (np.ndarray): AOA carbon biomass.
+        - nob_loc (np.ndarray): NOB carbon biomass.
+        - aox_loc (np.ndarray): Anammox Bacteria carbon biomass.
+        - phy_loc (np.ndarray): Phytoplankton carbon biomass.
+        - zoo_loc (np.ndarray): Zooplankton carbon biomass.
+        - det_loc (np.ndarray): Detrital carbon biomass.
+        - dic_loc (np.ndarray): DIC concentration.
+        - co2_flux (scalar): Flux of CO2 into upper cell.
+        
+    Returns:
+        dict: A dictionary containing:
+            - `totalC` (np.ndarray): Total Carbon content (µmolC/L).
+            
+    """
+
+    totalC = aoa_loc[:,1] + nob_loc[:,1] + aox_loc[:,1] + phy_loc[:,1] + zoo_loc[:,1] + det_loc[:,1] + dic_loc[:,1]
+    totalC[0] = totalC[0] + co2_flux 
+    return totalC

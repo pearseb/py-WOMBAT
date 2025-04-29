@@ -303,6 +303,7 @@ def main(expnum, year, days, lon, lat, atm_co2):
         #logging.info("Doing grazing")
         grazing = compute_grazing(
             tc,
+            o2_loc,
             aoa_loc, 
             nob_loc,
             aox_loc, 
@@ -369,6 +370,7 @@ def main(expnum, year, days, lon, lat, atm_co2):
             BGC)
         
         totalN1 = compute_totalN(aoa_loc, nob_loc, aox_loc, phy_loc, zoo_loc, det_loc, nh4_loc, no2_loc, no3_loc, n2_loc, BGC)
+        totalC1 = compute_totalC(aoa_loc, nob_loc, aox_loc, phy_loc, zoo_loc, det_loc, dic_loc, co2_flux['co2_flux'] / Grid.dz * dt)
 
         #logging.info("Updating arrays")
         # Step 5: Update tracer concentrations based on sources and sinks
@@ -392,8 +394,25 @@ def main(expnum, year, days, lon, lat, atm_co2):
         o2_loc[:,1] += sourcessinks["ddt_o2"] * dt
 
         totalN2 = compute_totalN(aoa_loc, nob_loc, aox_loc, phy_loc, zoo_loc, det_loc, nh4_loc, no2_loc, no3_loc, n2_loc, BGC)
+        totalC2 = compute_totalC(aoa_loc, nob_loc, aox_loc, phy_loc, zoo_loc, det_loc, dic_loc, 0.0)
         
         # Check for conservation of mass by ecosystem component
+        
+        if not (np.allclose(totalC1, totalC2, atol=1e-10)):
+            logging.info("Not conserving Carbon")
+            logging.info("totalC1 = %s"%(np.array2string(totalC1, precision=16, separator=", ", suppress_small=True)))
+            logging.info("totalC2 = %s"%(np.array2string(totalC2, precision=16, separator=", ", suppress_small=True)))
+            logging.info(" ")
+            logging.info("ddt_dic * dt = %s, "%(np.array2string(sourcessinks["ddt_dic"] * dt, precision=16, separator=", ", suppress_small=True)))
+            logging.info("ddt_phy * dt = %s, "%(np.array2string(sourcessinks["ddt_phy"] * dt, precision=16, separator=", ", suppress_small=True)))
+            logging.info("ddt_zoo * dt = %s, "%(np.array2string(sourcessinks["ddt_zoo"] * dt, precision=16, separator=", ", suppress_small=True)))
+            logging.info("ddt_det * dt = %s, "%(np.array2string(sourcessinks["ddt_det"] * dt, precision=16, separator=", ", suppress_small=True)))
+            logging.info("ddt_aoa * dt = %s, "%(np.array2string(sourcessinks["ddt_aoa"] * dt, precision=16, separator=", ", suppress_small=True)))
+            logging.info("ddt_nob * dt = %s, "%(np.array2string(sourcessinks["ddt_nob"] * dt, precision=16, separator=", ", suppress_small=True)))
+            logging.info("ddt_aox * dt = %s, "%(np.array2string(sourcessinks["ddt_aox"] * dt, precision=16, separator=", ", suppress_small=True)))
+            print("Not conserving carbon... exiting simulation")
+            sys.exit()
+        
         '''
         if not (np.allclose(totalN1, totalN2, atol=1e-10)):
             logging.info("Not conserving nitrogen")
