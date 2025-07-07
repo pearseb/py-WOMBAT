@@ -1,5 +1,6 @@
 
 import os 
+import sys
 from pathlib import Path
 import logging
 
@@ -31,11 +32,7 @@ from src.bgc import compute_light_limit, compute_nutrient_limit, compute_primary
                     compute_losses, compute_iron_chemistry, compute_co2_flux, compute_sourcessinks
 from src.plot import plot1D
 
-def main(expnum, year, days, lon, lat, atm_co2,
-         zoo_respi, zoo_qmort, zoo_assim, zoo_excre, 
-         zoo_grz, zoo_epsmin, zoo_epsmax, zoo_epsmid, zoo_epsrat, zoo_inerti, 
-         zoo_prefdet, grazform, 
-         detrem, w0):
+def main(expnum, year, days, lon, lat, atm_co2):
     """
     Main function to run the biogeochemical model.
     """
@@ -52,9 +49,7 @@ def main(expnum, year, days, lon, lat, atm_co2,
 
     # Initialise the diffusive mixing and BGC parameters
     Diff = p_Diff(Grid.npt)
-    BGC = p_BGC(zoo_respi=zoo_respi, zoo_qmort=zoo_qmort, zoo_assim=zoo_assim, zoo_excre=zoo_excre, zoo_grz=zoo_grz, 
-                zoo_epsmin=zoo_epsmin, zoo_epsmax=zoo_epsmax, zoo_epsmid=zoo_epsmid, zoo_epsrat=zoo_epsrat, zoo_inerti=zoo_inerti,
-                zoo_prefdet=zoo_prefdet, grazform=grazform, detrem=detrem, w0=w0)
+    BGC = p_BGC()
     
     # Initalize the tracers
     tracers = initialize_tracers(lat, lon, Grid)
@@ -119,7 +114,7 @@ def main(expnum, year, days, lon, lat, atm_co2,
     # Loop through time steps
     for step in range(total_steps):
 
-        if (step%1000==0):
+        if (step%10==0):
             logging.info(f"Running time step {step + 1} of {total_steps}")
         
         # Get the conditions for the current timestep
@@ -255,7 +250,6 @@ def main(expnum, year, days, lon, lat, atm_co2,
             zoo_loc, 
             np.mean(mphy_loc,axis=1), 
             np.mean(mdet_loc,axis=1), 
-            1, 
             BGC)
         
         #logging.info("Doing mortality")
@@ -284,8 +278,11 @@ def main(expnum, year, days, lon, lat, atm_co2,
         
         #logging.info("Doing sources and sinks")
         sourcessinks = compute_sourcessinks(
-            primary_production['phy_mu'], losses['phy_lmort'], losses['phy_qmort'], iron_uptake['phy_dfeupt'],
-            losses['zoo_zoores'], losses['zoo_qmort'], grazing['zoo_grzphy'], grazing['zoo_grzdet'], losses['det_remin'],
+            primary_production['phy_mu'], losses['phy_lmort'], losses['phy_qmort'], 
+            iron_uptake['phy_dfeupt'],
+            losses['zoo_zoores'], losses['zoo_qmort'], 
+            grazing['zoo_grzphy'], grazing['zoo_grzdet'], 
+            losses['det_remin'],
             phy_loc, phyfe_loc, zoo_loc, zoofe_loc, det_loc, detfe_loc, 
             iron_chemistry['dfe_prec'], iron_chemistry['dfe_scav'], iron_chemistry['dfe_coag'],
             chlorophyll_growth_rate['chl_mu'], light_limit['chlc_ratio'], 
@@ -305,7 +302,7 @@ def main(expnum, year, days, lon, lat, atm_co2,
         pchl_loc[:,1] += sourcessinks["ddt_pchl"] * dt
         dic_loc[:,1] += sourcessinks["ddt_dic"] * dt
         alk_loc[:,1] += sourcessinks["ddt_alk"] * dt
-        
+
         if (step % plot_freq) == 0:
             ## Step 6: Plot the output and save as a figure
             #fig = plot1D(no3_loc[:,1], dfe_loc[:,1], \
@@ -386,31 +383,12 @@ def main(expnum, year, days, lon, lat, atm_co2,
         },
         coords={
             "time": time.astype("datetime64[ns]"),
-            "depth": Grid.zgrid
+            "depth": -Grid.zgrid
         }
     )
     filename = (
         f"{OUTPUT_DIR}/lite_{year}_{days}days_{latt}_{atm_co2}ppm_exp{expnum}.nc"
     )
-    '''
-    filename = (
-        f"{OUTPUT_DIR}/lite_{year}_{days}days_{latt}_{atm_co2}ppm_exp{expnum}_"
-        f"zoorespi{BGC.zoo_respi * 86400.0:.3f}_"
-        f"zooqmort{BGC.zoo_qmort * 86400.0:.2f}_"
-        f"zooassim{BGC.zoo_assim:.2f}_"
-        f"zooexcre{BGC.zoo_excre:.2f}_"
-        f"zoogrz{BGC.zoo_grz * 86400.0:.2f}_"
-        f"zooepsmin{BGC.zoo_epsmin * 86400.0:.3f}_"
-        f"zooepsmax{BGC.zoo_epsmax * 86400.0:.2f}_"
-        f"zooepsmid{BGC.zoo_epsmid:.2f}_"
-        f"zooepsrat{BGC.zoo_epsrat:.2f}_"
-        f"zooinerti{BGC.zoo_inerti:.1f}_"
-        f"zooprefdet{BGC.zoo_prefdet:.2f}_"
-        f"grazform{BGC.grazform}_"
-        f"detrem{BGC.detrem * 86400.0:.2f}_"
-        f"w0{BGC.w0 * 86400.0:.2f}.nc"
-    )
-    '''
     logging.info("Saving to "+filename)
     if os.path.isfile(filename):
         os.remove(filename)
@@ -426,26 +404,8 @@ if __name__ == "__main__":
     parser.add_argument("--lon", type=float, default=230, help="Longitude of simulation")
     parser.add_argument("--lat", type=float, default=-50, help="Latitude of simulation")
     parser.add_argument("--atm_co2", type=float, default=400.0, help="Atmospheric CO2 level")
-    parser.add_argument("--zoo_respi", type=float, default=0.003, help="Zooplankton respiration rate")
-    parser.add_argument("--zoo_qmort", type=float, default=0.35, help="Zooplankton quadratic mortality closure term")
-    parser.add_argument("--zoo_assim", type=float, default=0.60, help="Zooplankton assimilation efficiency")
-    parser.add_argument("--zoo_excre", type=float, default=0.80, help="Zooplankton excretion fraction")
-    parser.add_argument("--zoo_grz", type=float, default=3.0, help="Maximum grazing rate for zooplankton")
-    parser.add_argument("--zoo_epsmin", type=float, default=0.025, help="Minimum epsilon of zooplankton (microzooplankton)")
-    parser.add_argument("--zoo_epsmax", type=float, default=0.25, help="Maximum epsilon of zooplankton (mesozooplankton)")
-    parser.add_argument("--zoo_epsmid", type=float, default=0.25, help="Phytoplankton concentration where grazing is 50% micro and 50% mesozooplankton")
-    parser.add_argument("--zoo_epsrat", type=float, default=0.25, help="Rate of transition between meso and microzooplankton")
-    parser.add_argument("--zoo_inerti", type=float, default=0.25, help="Number of days for moving average of the prey biomass")
-    parser.add_argument("--zoo_prefdet", type=float, default=0.50, help="Zooplankton grazing preference for detritus")
-    parser.add_argument("--grazform", type=int, default=1, help="Grazing formulation type (1, 2, or 3)")
-    parser.add_argument("--detrem", type=float, default=0.40, help="Detrital quadratic remineralisation term")
-    parser.add_argument("--w0", type=float, default=25.0, help="Base sinking rate associated with productive phytoplankton community")
-    
 
     args = parser.parse_args()
-    main(args.expnum, args.year, args.days, args.lon, args.lat, args.atm_co2, 
-         args.zoo_respi, args.zoo_qmort, args.zoo_assim, args.zoo_excre, args.zoo_grz, 
-         args.zoo_epsmin, args.zoo_epsmax, args.zoo_epsmid, args.zoo_epsrat, args.zoo_interi, 
-         args.zoo_prefdet, args.grazform, args.detrem, args.w0)
+    main(args.expnum, args.year, args.days, args.lon, args.lat, args.atm_co2)
     
 

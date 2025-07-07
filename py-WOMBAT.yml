@@ -1,0 +1,29 @@
+name: pyWOMBAT_env
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10
+  - jupyterlab
+  - nodejs
+  - ipywidgets
+  - numpy=1.24.4
+  - matplotlib
+  - scipy
+  - netcdf4
+  - h5py
+  - pandas 
+  - openpyxl
+  - xarray=2023.8.0
+  - dask
+  - dask-labextension
+  - cmocean
+  - PyCO2SYS>1.8.0
+  - pip:
+    - jupyter-server-proxy
+
+      ## enables Jupyterlab extension for Dask
+      #labextension:
+      #  - "@jupyter-widgets/jupyterlab-manager"
+      #  - "dask-labextension"
+

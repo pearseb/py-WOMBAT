@@ -261,7 +261,7 @@ def compute_iron_uptake(phy_loc, phyfe_loc, dfe_loc, phy_mumax, phy_limdfe, phy_
 
 
 #@njit
-def compute_grazing(tc, phy_loc, det_loc, zoo_loc, mphy_loc, mdet_loc, grazform, BGC):
+def compute_grazing(tc, phy_loc, det_loc, zoo_loc, mphy_loc, mdet_loc, BGC):
     """
     Compute zooplankton grazing rates on phytoplankton and detritus.
 
@@ -272,8 +272,7 @@ def compute_grazing(tc, phy_loc, det_loc, zoo_loc, mphy_loc, mdet_loc, grazform,
         zoo_loc (np.ndarray): Zooplankton concentration (µmolC/L).
         mphy_loc (np.ndarray): Long-term mean phytoplankton concentration (µmolC/L).
         mdet_loc (np.ndarray): Long-term mean detritus concentration (µmolC/L).
-        grazform (int): Grazing formulation type (1 or 2).
-
+        
     Returns:
         dict: A dictionary containing:
             - `zoo_mumax` (np.ndarray): Maximum zooplankton grazing rate (s⁻¹).
@@ -297,15 +296,8 @@ def compute_grazing(tc, phy_loc, det_loc, zoo_loc, mphy_loc, mdet_loc, grazform,
     mprey = np.fmax(0.0, mphy_loc) * BGC.zoo_prefphy + np.fmax(0.0, mdet_loc) * BGC.zoo_prefdet
 
     # Prey capture rate based on grazing formulation
-    if BGC.grazform == 1:
-        zoo_epsmin = BGC.zoo_epsmin * (1.5 * np.tanh(0.2 * (tc - 15.0)) + 2.5)
-        zoo_epsilon = BGC.zoo_epsmin + (BGC.zoo_epsmax - BGC.zoo_epsmin)*0.5 * np.ones(len(phy_loc))
-    elif BGC.grazform == 2:
-        zoo_epsmin = BGC.zoo_epsmin * (1.5 * np.tanh(0.2 * (tc - 15.0)) + 2.5)
-        zoo_peffect = 1.0 - (1.0 / (1.0 + np.exp(-BGC.zoo_epsrat * (mprey - BGC.zoo_epsmid))))
-        zoo_epsilon = zoo_epsmin + (BGC.zoo_epsmax - zoo_epsmin) * zoo_peffect
-    else:
-        raise ValueError("Invalid grazing formulation")
+    zoo_peffect = np.exp(-mprey * BGC.zoo_epsrat)
+    zoo_epsilon = BGC.zoo_epsmin + (BGC.zoo_epsmax - BGC.zoo_epsmin) * zoo_peffect
     
     # Realized grazing rate
     zoo_capt = zoo_epsilon * prey**2
