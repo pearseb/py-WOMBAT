@@ -1,4 +1,5 @@
-# py-WOMBAT (1D) – WOMBAT-lite Biogeochemical Model for Gadi
+# py-WOMBAT (1D)
+## WOMBAT-lite biogeochemical model
 
 This repository contains a **1D water column implementation** of the **WOMBAT-lite biogeochemical model**, adapted to run on the **Gadi supercomputer** at the National Computational Infrastructure (NCI), Australia.
 
@@ -6,7 +7,7 @@ The model is intended for use within a **Jupyter Notebook interface** on **Gadi�
 
 ---
 
-## 🧪 Model Overvieww
+## 🧪 Model Overview
 
 - **WOMBAT-lite** is a reduced-complexity ocean biogeochemical model, focusing on key oceanic biogeochemical processes.
 - This 1D version simulates vertical dynamics (mixing, sinking, remineralisation) and biological activity in a single water column.
@@ -33,6 +34,8 @@ The model is intended for use within a **Jupyter Notebook interface** on **Gadi�
 - Access to the [Australian Research Environment (ARE)](https://are.nci.org.au/)
 - A Gadi-compatible environment with required Python dependencies (see below)
 
+---
+
 ### 1. Clone the Repository on Gadi
 
 Once on Gadi:
@@ -48,26 +51,73 @@ I would recommend making a new experimental branch for yourself where developmen
 git checkout -b my_new_branch
 ```
 
+---
+
 ### 2. Create a custom conda environment called "pyWOMBAT_env"
 
 ```bash
 module use /g/data/hh5/public/modules
+module load conda/analysis3-unstable
 ```
-Follow [these instructions](http://climate-cms.wikis.unsw.edu.au/Conda#Creating_personal_environments) to create your conda environment, and then run
+Follow [these instructions](http://climate-cms.wikis.unsw.edu.au/Conda#Creating_personal_environments) to set up your conda workspace, particularly the .condarc file in your home directory, and then run
 ```bash
 conda env create -f py-WOMBAT.yml
 ```
+This will create an environment called **pyWOMBAT_env** that you will need to point to when you spin-up your jupyter notebook on the ARE (next step).
+
+---
 
 ### 3. Spin-up an ARE Jupyter notebook
 
 Go to the [Australian Research Environment (ARE)](https://are.nci.org.au/) and click on **JupyterLab**
 
+Make sure you charge to the correct project code, that you have enough compute and that you have access to the right project datasets...\
+\
+![image](https://github.com/user-attachments/assets/78a0d923-2c93-4d86-b404-3babf48babca)
 
-### 4. Run the model
+Make sure that you click on **advanced settings** and point the notebook towards your custom conda environment...\
+\
+![image](https://github.com/user-attachments/assets/23277732-8a24-448c-ad11-08745839a9e1)
 
-Open the **run_standard.ipynb** notebook and execute the code chunks to run the basic model. You can play around with changing the year, latitude, longitude, and run length.
+And launch!\
+\
+![image](https://github.com/user-attachments/assets/0ce32bbd-bf8c-4e35-b046-4adeb0f3e878)
 
-The year, latitude and longitude changes the conditions of the 1D water column. The code works by looking for the relevant surface temperature, wind speeds, downward shortwave radiation (i.e., incident light), mixed layer depths and vertical velocities at that location for the given year. So, if 2001 is chosen and a latitude-longitude point of 30S and 200E, then the code will extract the conditions at this location in the South Pacific for the year 2001. NOTE that these data come from the JRA55do and BRAN2020 (in the case of mixed layer depth and vertical velocities).
+---
+
+### 4. Running the Standard Model
+
+To get started:
+
+1. Open the notebook: **`run_standard.ipynb`**
+2. Execute the code cells sequentially to run the basic 1D model.
+3. You can experiment with changing:
+
+   * **Year**
+   * **Latitude**
+   * **Longitude**
+   * **Run length** (in days)
+
+---
+
+The **year**, **latitude**, and **longitude** determine the environmental conditions for the 1D water column simulation. The model automatically retrieves:
+
+* **Surface temperature**
+* **Wind speeds**
+* **Downward shortwave radiation** (i.e., sunlight reaching the surface)
+* **Mixed layer depth**
+* **Vertical velocities**
+
+For example:
+
+> If you set the year to **2001** and the coordinates to **30°S, 200°E**, the model will extract data for that location in the **central south Pacific** for the year 2001.
+
+---
+
+The forcing datasets used include
+
+* **Atmospheric forcing**: [JRA55-do](https://climate.mri-jma.go.jp/~yukimoto/jra55do/)
+* **Oceanographic fields** (e.g. mixed layer depth and vertical velocities): [BRAN2020](https://research.csiro.au/bluelink/outputs/bran/)
 
 
 
