@@ -19,25 +19,39 @@ def initialize_tracers(lat, lon, grid):
     """
     
     # Load boundary conditions from GLODAP and WOA2023
-    data = xr.open_dataset('inputs/woa23_all_n00_01.nc', decode_times=False)
-    no3 = data['n_an'].squeeze()
-    data = xr.open_dataset('inputs/GLODAPv2.2016b.TAlk.nc', decode_times=False)
-    dep = data['Depth']
-    alk = data['TAlk'].squeeze().assign_coords({"depth_surface":dep})
-    data = xr.open_dataset('inputs/GLODAPv2.2016b.TCO2.nc', decode_times=False)
-    dic = data['TCO2'].squeeze().assign_coords({"depth_surface":dep})
+    data = xr.open_dataset('/g/data/vk83/experiments/inputs/access-om3/wombat/initial_conditions/global.100km/2024.04.02/GLODAPv2.2016b.NO3_fillmiss.nc', decode_times=False)
+    no3 = data['NO3'].squeeze()
+    no3lon = no3.coords['lon'].values
+    no3lon[no3lon>360.0] -= 360.0
+    no3 = no3.assign_coords({"lon":no3lon})
+    data = xr.open_dataset('/g/data/vk83/experiments/inputs/access-om3/wombat/initial_conditions/global.100km/2021.06.07/FEMIP_model_median_iron_2016_fillmiss.nc', decode_times=False)
+    dfe = data['IRON'].squeeze() * 1e9
+    dfe = dfe.rename({"DEPTH":"Depth", "LON":"lon", "LAT":"lat"})
+    data = xr.open_dataset('/g/data/vk83/experiments/inputs/access-om3/wombat/initial_conditions/global.100km/2024.04.02/GLODAPv2.2016b.TAlk_fillmiss.nc', decode_times=False)
+    alk = data['TAlk'].squeeze()
+    alk = alk.assign_coords({"lon":no3lon})
+    data = xr.open_dataset('/g/data/vk83/experiments/inputs/access-om3/wombat/initial_conditions/global.100km/2024.04.02/GLODAPv2.2016b.TCO2_fillmiss.nc', decode_times=False)
+    dic = data['TCO2'].squeeze()
+    dic = dic.assign_coords({"lon":no3lon})
     data.close()
+
+    no3 = no3.sortby('lon')
+    dfe = dfe.sortby('lon')
+    alk = alk.sortby('lon')
+    dic = dic.sortby('lon')
     
-    sno3 = no3.sel(lon=lon, lat=lat, depth=0, method='nearest')
-    dno3 = no3.sel(lon=lon, lat=lat, depth=-grid.zgrid[-1], method='nearest')
-    salk = alk.sel(lon=lon, lat=lat, depth_surface=0, method='nearest')
-    dalk = alk.sel(lon=lon, lat=lat, depth_surface=-grid.zgrid[-1], method='nearest')
-    sdic = dic.sel(lon=lon, lat=lat, depth_surface=0, method='nearest')
-    ddic = dic.sel(lon=lon, lat=lat, depth_surface=-grid.zgrid[-1], method='nearest')
+    sno3 = no3.sel(lon=lon, lat=lat, Depth=0.0, method='nearest')
+    dno3 = no3.sel(lon=lon, lat=lat, Depth=-grid.zgrid[-1], method='nearest')
+    salk = alk.sel(lon=lon, lat=lat, Depth=0, method='nearest')
+    dalk = alk.sel(lon=lon, lat=lat, Depth=-grid.zgrid[-1], method='nearest')
+    sdic = dic.sel(lon=lon, lat=lat, Depth=0, method='nearest')
+    ddic = dic.sel(lon=lon, lat=lat, Depth=-grid.zgrid[-1], method='nearest')
+    sdfe = dfe.sel(lon=lon, lat=lat, Depth=0, method='nearest')
+    ddfe = dfe.sel(lon=lon, lat=lat, Depth=-grid.zgrid[-1], method='nearest')
     
     # Boundary conditions for tracers
     no3 = np.linspace(sno3, dno3, grid.npt)               # Nitrate (µM)
-    dfe = np.linspace(0.3 / 1000, 0.6 / 1000, grid.npt) # Dissolved iron (nM to µM)
+    dfe = np.linspace(sdfe / 1000, ddfe / 1000, grid.npt) # Dissolved iron (nM to µM)
     phy = np.linspace(0.01, 0.0, grid.npt)              # Phytoplankton (µM C)
     zoo = np.linspace(0.01, 0.0, grid.npt)             # Zooplankton (µM C)
     det = np.linspace(0.01, 0.0, grid.npt)             # Detritus (µM C)

@@ -76,18 +76,23 @@ def main(expnum, year, days, lon, lat, atm_co2):
     
     # Mixed layer depth
     logging.info("Loading condition data (T, W, MLDs, PAR, WindSpeed) at year %i"%(year))
-    mld_timeseries = get_mld_timeseries(year, lat, lon, dt)
-    logging.info("Loaded MLD")
-    par_timeseries = get_rsds_timeseries(year, lat, lon, dt)
-    logging.info("Loaded PAR")
-    tas_timeseries = get_tas_timeseries(year, lat, lon, dt)
-    logging.info("Loaded T")
-    sfcWnd_timeseries = get_sfcWnd_timeseries(year, lat, lon, dt)
-    logging.info("Loaded Wind")
+    logging.info("Loading W")
     w_timeseries = get_w_timeseries(year, lat, lon, dt, bot)
     logging.info("Loaded W")
+    logging.info("Loading PAR")
+    par_timeseries = get_rsds_timeseries(year, lat, lon, dt)
+    logging.info("Loaded PAR")
+    logging.info("Loading T")
+    tas_timeseries = get_tas_timeseries(year, lat, lon, dt)
+    logging.info("Loaded T")
+    logging.info("Loading Wind")
+    sfcWnd_timeseries = get_sfcWnd_timeseries(year, lat, lon, dt)
+    logging.info("Loaded Wind")
+    logging.info("Loading MLD")
+    mld_timeseries = get_mld_timeseries(year, lat, lon, dt)
+    logging.info("Loaded MLD")
     # get the chlorophyll-dependent attenuation coefficients for RGB PAR
-    p_Chl_k = np.genfromtxt("inputs/rgb_attenuation_coefs.txt", delimiter="\t", skip_header=1)
+    p_Chl_k = np.genfromtxt("rgb_attenuation_coefs.txt", delimiter="\t", skip_header=1)
 
     # Mixing timescales
     tmld = 1.0 / (86400.0 / 6.0)   # Mixing timescale (1/s)  (every 4 hours)
@@ -342,6 +347,7 @@ def main(expnum, year, days, lon, lat, atm_co2):
         latt = "%iS"%(np.abs(lat))
     else:
         latt = "%iN"%(lat)
+    lonn = "%iE"%(lon)
     
     
     ## Step 8: Make video and delete figures
@@ -387,7 +393,7 @@ def main(expnum, year, days, lon, lat, atm_co2):
         }
     )
     filename = (
-        f"{OUTPUT_DIR}/lite_{year}_{days}days_{latt}_{atm_co2}ppm_exp{expnum}.nc"
+        f"{OUTPUT_DIR}/lite_year{year}_{days}days_{latt}_{lonn}_{atm_co2}ppm_exp{expnum}.nc"
     )
     logging.info("Saving to "+filename)
     if os.path.isfile(filename):

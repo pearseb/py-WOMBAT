@@ -32,7 +32,8 @@ def get_mld_timeseries(yyyy, latitude, longitude, dt):
     times = np.arange(np.datetime64(start, 'ns'), np.datetime64(end, 'ns'), np.timedelta64(int(min_per_ts),'m')).astype('datetime64[ns]')
     
     # Load dataset
-    data = xr.open_mfdataset('inputs/ocean_mld_%i_*.nc'%(yyyy))
+    fnames = '/g/data/gb6/BRAN/BRAN2020/daily/ocean_mld_%i_*.nc'%(yyyy)
+    data = xr.open_mfdataset(fnames)
     mld = data['mld']
     data.close()
     

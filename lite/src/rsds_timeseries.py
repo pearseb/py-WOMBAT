@@ -31,7 +31,8 @@ def get_rsds_timeseries(yyyy, latitude, longitude, dt):
     times = np.arange(np.datetime64(start, 'ns'), np.datetime64(end, 'ns'), np.timedelta64(int(min_per_ts), 'm')).astype('datetime64[ns]')
     
     # Load dataset
-    data = xr.open_dataset('inputs/rsds_%i.nc'%(yyyy))
+    fname = '/g/data/qv56/replicas/input4MIPs/CMIP6/OMIP/MRI/MRI-JRA55-do-1-5-0/atmos/3hr/rsds/gr/v20200916/rsds_input4MIPs_atmosphericState_OMIP_MRI-JRA55-do-1-5-0_gr_%i01010130-%i12312230.nc'%(yyyy,yyyy)
+    data = xr.open_dataset(fname)
     rsds = data['rsds']
     data.close()
     
