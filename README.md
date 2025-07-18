@@ -30,7 +30,8 @@ The model is intended for use within a **Jupyter Notebook interface** on **Gadiâ
 ### Prerequisites
 
 - Access to the [Gadi supercomputer](https://opus.nci.org.au/display/Help/Gadi+User+Guide)
-- An active NCI project allocation to gb6, qv56 --> these are for access to the forcing files (e.g., surface temperature, etc.)
+- An active NCI project allocation to _hh5_ --> for loading payu and conda
+- An active NCI project allocation to _vk83_, _gb6_, _qv56_ --> these are for access to the forcing files (e.g., surface temperature, etc.)
 - Access to the [Australian Research Environment (ARE)](https://are.nci.org.au/)
 - A Gadi-compatible environment with required Python dependencies (see below)
 
@@ -50,20 +51,36 @@ I would recommend making a new experimental branch for yourself where developmen
 ```bash
 git checkout -b my_new_branch
 ```
+We do this because it's important that you can alter the source code and run experiments by altering the `run_standard.ipynb` notebook without fear of changing something within the original branch, which in this case is `pyWOMBAT-on-Gadi`
 
 ---
 
 ### 2. Create a custom conda environment called "pyWOMBAT_env"
 
+Load payu and conda.
 ```bash
 module use /g/data/hh5/public/modules
 module load conda/analysis3-unstable
 ```
-Follow [these instructions](http://climate-cms.wikis.unsw.edu.au/Conda#Creating_personal_environments) to set up your conda workspace, particularly the .condarc file in your home directory, and then run
+\
+Let's set up your conda workspace, particularly the .condarc file in your home directory. Make a ~/.condarc file in your home directory (with your choice of text editor (e.g., vim, nano) and fill it with
+```bash
+auto_activate_base: false
+envs_dirs:
+  - /scratch/$PROJECT/$USER/conda/envs
+  - /g/data/hh5/public/apps/miniconda3/envs
+pkgs_dirs:
+  - /scratch/$PROJECT/$USER/conda/pkgs
+conda-build:
+  root-dir: /scratch/$PROJECT/$USER/conda/bld
+```
+Making sure to replace the `$PROJECT` and `$USER` with an appropriate project code and your username. The `$PROJECT` code you give will be where your conda environment is set up. By default, you can see that it is being placed on scratch, which is the temporary storage on Gadi and will be wiped from storage every 3 months. This means that you will need to repeat the following line once every 3 months to keep your custom conda environment active.
+\
+Now that you have a .condarc file in your home directory, navigate to the place you cloned py-WOMBAT to in Step 1 above. Execute:
 ```bash
 conda env create -f py-WOMBAT.yml
 ```
-This will create an environment called **pyWOMBAT_env** that you will need to point to when you spin-up your jupyter notebook on the ARE (next step).
+This will create an environment in the `/scratch/$PROJECT/$USER/conda/env` directory called **pyWOMBAT_env** that you will need to point to when you spin-up your jupyter notebook on the ARE (next step).
 
 ---
 
@@ -72,6 +89,7 @@ This will create an environment called **pyWOMBAT_env** that you will need to po
 Go to the [Australian Research Environment (ARE)](https://are.nci.org.au/) and click on **JupyterLab**
 
 Make sure you charge to the correct project code, that you have enough compute and that you have access to the right project datasets...\
+**NOTE** make sure you add _gdata/vk83_, _gdata/gb6_, _gdata/qv56_ and the project code where you want to save your output to (e.g., _gdata/xx00_) to the `Storage` prompt!
 \
 ![image](https://github.com/user-attachments/assets/78a0d923-2c93-4d86-b404-3babf48babca)
 
