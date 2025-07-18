@@ -8,7 +8,6 @@ import logging
 BASE_DIR = Path(__file__).resolve().parent
 
 # Define input and output directories relative to BASE_DIR
-INPUT_DIR = BASE_DIR / "inputs"
 OUTPUT_DIR = "/g/data/es60/pjb581/py-WOMBAT/output"
 
 import argparse
